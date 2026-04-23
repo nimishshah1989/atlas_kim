@@ -54,6 +54,12 @@ def _fmt_num(value: Optional[float], prec: int = 1) -> str:
     return f"{value:.{prec}f}"
 
 
+def _fmt_cr(value: Optional[float]) -> str:
+    if value is None:
+        return "N/A"
+    return f"₹{value:,.1f} Cr"
+
+
 # ---------------------------------------------------------------------------
 # Core narrative generator
 # ---------------------------------------------------------------------------
@@ -62,19 +68,25 @@ def _fmt_num(value: Optional[float], prec: int = 1) -> str:
 def generate_narrative(
     metrics_dict: dict[str, Any],
     regime_dict: Optional[dict[str, Any]] = None,
+    instrument_type: Optional[str] = None,
+    lookthrough_dict: Optional[dict[str, Any]] = None,
+    factor_dict: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
-    """Generate a deterministic narrative block from raw metrics + regime.
+    """Generate a deterministic narrative block from raw metrics + context.
 
     Args:
-        metrics_dict: Flat dict of metric values (rs_nifty_3m_rank, ret_3m, etc.).
-        regime_dict: Optional market regime dict (regime, direction, health_zone, etc.).
+        metrics_dict: Flat dict of metric values.
+        regime_dict: Optional market regime dict.
+        instrument_type: EQUITY, MF, ETF, INDEX, INDEX_GLOBAL.
+        lookthrough_dict: Optional look-through summary for funds/indices.
+        factor_dict: Optional 6-factor percentiles for MFs/ETFs.
 
     Returns:
         {"verdict": str, "reasons": [...], "risks": [...],
          "technical_snapshot": str, "recommended_action": str}
     """
-    rs_3m = _safe_float(metrics_dict.get("rs_nifty_3m_rank"))
-    rs_12m = _safe_float(metrics_dict.get("rs_nifty_12m_rank"))
+    rs_3m = _safe_float(metrics_dict.get("rs_nifty_3m_rank") or metrics_dict.get("rs_sp500_3m_rank"))
+    rs_12m = _safe_float(metrics_dict.get("rs_nifty_12m_rank") or metrics_dict.get("rs_sp500_12m_rank"))
     ret_3m = _safe_float(metrics_dict.get("ret_3m"))
     ret_12m = _safe_float(metrics_dict.get("ret_12m"))
     rsi = _safe_float(metrics_dict.get("rsi_14"))
@@ -89,7 +101,7 @@ def generate_narrative(
     max_dd = _safe_float(metrics_dict.get("max_dd_252d"))
     current_dd = _safe_float(metrics_dict.get("current_dd"))
     vol_21d = _safe_float(metrics_dict.get("vol_21d"))
-    persistence = _safe_float(metrics_dict.get("rs_nifty_persistence"))
+    persistence = _safe_float(metrics_dict.get("rs_nifty_persistence") or metrics_dict.get("rs_sp500_persistence"))
     macd = _safe_float(metrics_dict.get("macd"))
     macd_signal = _safe_float(metrics_dict.get("macd_signal"))
 
@@ -103,11 +115,11 @@ def generate_narrative(
     # --- RS reasons / risks ---
     if rs_3m is not None and rs_3m >= _RS_RANK_STRONG:
         reasons.append(
-            f"RS 3-month rank is strong at {_fmt_num(rs_3m)} (top quartile vs Nifty)."
+            f"RS 3-month rank is strong at {_fmt_num(rs_3m)} (top quartile vs benchmark)."
         )
     elif rs_3m is not None and rs_3m <= _RS_RANK_WEAK:
         risks.append(
-            f"RS 3-month rank is weak at {_fmt_num(rs_3m)} (bottom quartile vs Nifty)."
+            f"RS 3-month rank is weak at {_fmt_num(rs_3m)} (bottom quartile vs benchmark)."
         )
 
     if rs_12m is not None and rs_12m >= _RS_RANK_STRONG:
@@ -213,6 +225,104 @@ def generate_narrative(
         risks.append("Market direction is deteriorating — breadth is weakening.")
     elif direction == "ACCELERATING":
         reasons.append("Market direction is accelerating — breadth is expanding.")
+
+    # --- Instrument-type-specific prose ---
+    if instrument_type in ("MF", "ETF") and lookthrough_dict:
+        lt_rs_3m = _safe_float(lookthrough_dict.get("lookthrough_rs_3m"))
+        leader_pct = _safe_float(lookthrough_dict.get("pct_holdings_leader"))
+        emerging_pct = _safe_float(lookthrough_dict.get("pct_holdings_emerging"))
+        broken_pct = _safe_float(lookthrough_dict.get("pct_holdings_broken"))
+        top_sector = lookthrough_dict.get("top_sector")
+        num_holdings = lookthrough_dict.get("num_holdings")
+        cap_tilt = lookthrough_dict.get("cap_tilt")
+        dominant_sectors = lookthrough_dict.get("dominant_sectors")
+
+        if lt_rs_3m is not None:
+            if lt_rs_3m >= 75:
+                reasons.append(f"Look-through RS 3m is strong at {_fmt_num(lt_rs_3m)} — underlying portfolio is outperforming.")
+            elif lt_rs_3m <= 35:
+                risks.append(f"Look-through RS 3m is weak at {_fmt_num(lt_rs_3m)} — underlying portfolio is lagging.")
+
+        if leader_pct is not None:
+            if leader_pct >= 40:
+                reasons.append(f"{_fmt_num(leader_pct)}% of holdings are in LEADER state — high-quality underlying exposure.")
+            elif leader_pct <= 10:
+                risks.append(f"Only {_fmt_num(leader_pct)}% of holdings are in LEADER state — portfolio quality is weak.")
+
+        if broken_pct is not None and broken_pct >= 20:
+            risks.append(f"{_fmt_num(broken_pct)}% of holdings are in BROKEN state — significant portfolio damage.")
+
+        if top_sector:
+            reasons.append(f"Top sector exposure is {top_sector}.")
+
+        if cap_tilt:
+            reasons.append(f"Portfolio shows a {cap_tilt.lower()}-cap tilt.")
+
+        if num_holdings is not None:
+            if num_holdings <= 30:
+                reasons.append(f"Concentrated portfolio with {num_holdings} holdings — high conviction strategy.")
+            elif num_holdings >= 60:
+                risks.append(f"Diversified portfolio with {num_holdings} holdings — potential over-diversification.")
+
+        if factor_dict:
+            mom = _safe_float(factor_dict.get("factor_momentum_pct"))
+            qual = _safe_float(factor_dict.get("factor_quality_pct"))
+            res = _safe_float(factor_dict.get("factor_resilience_pct"))
+            hold = _safe_float(factor_dict.get("factor_holdings_pct"))
+            cost = _safe_float(factor_dict.get("factor_cost_pct"))
+            cons = _safe_float(factor_dict.get("factor_consistency_pct"))
+
+            factor_notes = []
+            if mom is not None and mom >= 80:
+                factor_notes.append("momentum")
+            if qual is not None and qual >= 80:
+                factor_notes.append("quality")
+            if res is not None and res >= 80:
+                factor_notes.append("resilience")
+            if hold is not None and hold >= 80:
+                factor_notes.append("holdings quality")
+            if cost is not None and cost >= 80:
+                factor_notes.append("cost efficiency")
+            if cons is not None and cons >= 80:
+                factor_notes.append("consistency")
+            if factor_notes:
+                reasons.append(f"Top-decile {_fmt_num(len(factor_notes))}-factor strengths: {', '.join(factor_notes)}.")
+
+            er = _safe_float(factor_dict.get("expense_ratio"))
+            aum = _safe_float(factor_dict.get("aum_cr"))
+            if er is not None:
+                if er <= 0.5:
+                    reasons.append(f"Expense ratio of {er:.2f}% is attractively low.")
+                elif er >= 2.0:
+                    risks.append(f"Expense ratio of {er:.2f}% is elevated and will erode long-term returns.")
+
+    elif instrument_type == "INDEX" and lookthrough_dict:
+        lt_rs_3m = _safe_float(lookthrough_dict.get("lookthrough_rs_3m"))
+        leader_pct = _safe_float(lookthrough_dict.get("pct_holdings_leader"))
+        num_holdings = lookthrough_dict.get("num_holdings")
+
+        if lt_rs_3m is not None:
+            if lt_rs_3m >= 70:
+                reasons.append(f"Index look-through RS is healthy at {_fmt_num(lt_rs_3m)} — constituents are outperforming.")
+            elif lt_rs_3m <= 40:
+                risks.append(f"Index look-through RS is weak at {_fmt_num(lt_rs_3m)} — breadth is poor.")
+
+        if leader_pct is not None:
+            if leader_pct >= 30:
+                reasons.append(f"{_fmt_num(leader_pct)}% of constituents are in LEADER state — broad market health is good.")
+            elif leader_pct <= 10:
+                risks.append(f"Only {_fmt_num(leader_pct)}% of constituents are leaders — market breadth is narrow.")
+
+        if num_holdings is not None:
+            reasons.append(f"Index tracks {num_holdings} constituents.")
+
+    elif instrument_type == "INDEX_GLOBAL":
+        rs_msci = _safe_float(metrics_dict.get("rs_msci_3m_rank"))
+        rs_sp500 = _safe_float(metrics_dict.get("rs_sp500_3m_rank"))
+        if rs_msci is not None and rs_msci >= 70:
+            reasons.append(f"Global RS vs MSCI World is strong at {_fmt_num(rs_msci)} — outperforming global peers.")
+        elif rs_msci is not None and rs_msci <= 35:
+            risks.append(f"Global RS vs MSCI World is weak at {_fmt_num(rs_msci)} — underperforming global peers.")
 
     # --- Verdict & recommended action ---
     verdict = "NEUTRAL"

@@ -1,99 +1,12 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import EvidenceCard from "@/components/unified/EvidenceCard";
 import DataFreshness from "@/components/unified/DataFreshness";
 import Link from "next/link";
+import { postApi } from "@/lib/api-unified";
 import type { ScreenerResponse, ScreenerRow, MetricSnapshot } from "@/lib/api-unified";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-async function postSectorScreen(sector: string): Promise<ScreenerResponse> {
-  const res = await fetch(`${API_BASE}/api/unified/screen`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      filters: [{ field: "sector", op: "eq", value: sector }],
-      sort_field: "rs_nifty_3m_rank",
-      sort_direction: "desc",
-      limit: 100,
-      offset: 0,
-    }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
-export default function SectorDetailPage() {
-  const params = useParams();
-  const name = decodeURIComponent((params.name as string) ?? "");
-  const [data, setData] = useState<ScreenerResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const resp = await postSectorScreen(name);
-        if (!cancelled) setData(resp);
-      } catch {
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [name]);
-
-  const rows = data?.rows ?? [];
-  const dataAsOf = data?.meta?.data_as_of ?? null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-        <div>
-          <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginBottom: "4px" }}>
-            <Link href="/unified/sectors" style={{ color: "var(--accent-700)", textDecoration: "none" }}>Sectors</Link>
-            <span style={{ margin: "0 6px", color: "var(--border-strong)" }}>/</span>
-            {name}
-          </div>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "26px", fontWeight: 400, margin: 0 }}>{name}</h1>
-        </div>
-        <DataFreshness dataAsOf={dataAsOf} />
-      </div>
-
-      {!loading && rows.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>Stocks ({rows.length})</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
-            {rows.map((stock) => (
-              <EvidenceCard
-                key={stock.instrument_id}
-                instrumentId={stock.instrument_id}
-                symbol={stock.symbol}
-                name={stock.name}
-                sector={stock.sector}
-                metrics={rowToMetrics(stock, dataAsOf)}
-                narrative={null}
-                dataAsOf={dataAsOf}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!loading && rows.length === 0 && (
-        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-tertiary)" }}>No stocks found in this sector.</div>
-      )}
-
-      {loading && (
-        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-tertiary)" }}>Loading sector…</div>
-      )}
-    </div>
-  );
-}
 
 function rowToMetrics(stock: ScreenerRow, dataAsOf: string | null): MetricSnapshot {
   return {
@@ -113,4 +26,126 @@ function rowToMetrics(stock: ScreenerRow, dataAsOf: string | null): MetricSnapsh
     state: stock.state, action: stock.action, action_confidence: stock.action_confidence,
     frag_score: stock.frag_score, frag_level: null,
   };
+}
+
+const LIMIT = 24;
+
+export default function SectorDetailPage() {
+  const params = useParams();
+  const name = decodeURIComponent((params.name as string) ?? "");
+  const [rows, setRows] = useState<ScreenerRow[]>([]);
+  const [dataAsOf, setDataAsOf] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const load = useCallback(async (currentOffset: number, append: boolean) => {
+    if (currentOffset === 0) setLoading(true);
+    else setLoadingMore(true);
+    try {
+      const resp = await postApi<ScreenerResponse>("/api/unified/screen", {
+        filters: [{ field: "sector", op: "eq", value: name }],
+        sort_field: "rs_nifty_3m_rank",
+        sort_direction: "desc",
+        limit: LIMIT,
+        offset: currentOffset,
+      });
+      setRows((prev) => (append ? [...prev, ...resp.rows] : resp.rows));
+      setTotalCount(resp.total_count);
+      setDataAsOf(resp.meta?.data_as_of ?? null);
+    } catch {
+      if (!append) setRows([]);
+      setError(true);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [name]);
+
+  useEffect(() => {
+    setOffset(0);
+    load(0, false);
+  }, [name, load]);
+
+  const handleLoadMore = useCallback(() => {
+    const nextOffset = offset + LIMIT;
+    setOffset(nextOffset);
+    load(nextOffset, true);
+  }, [offset, load]);
+
+  const hasMore = rows.length < totalCount;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+        <div>
+          <div style={{ fontSize: "11px", color: "var(--text-tertiary)", marginBottom: "4px" }}>
+            <Link href="/unified/sectors" style={{ color: "var(--accent-700)", textDecoration: "none" }}>Sectors</Link>
+            <span style={{ margin: "0 6px", color: "var(--border-strong)" }}>/</span>
+            {name}
+          </div>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "26px", fontWeight: 400, margin: 0 }}>{name}</h1>
+        </div>
+        <DataFreshness dataAsOf={dataAsOf} />
+      </div>
+
+      {!loading && rows.length > 0 && (
+        <>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>Stocks ({rows.length} of {totalCount})</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
+              {rows.map((stock) => (
+                <EvidenceCard
+                  key={stock.instrument_id}
+                  instrumentId={stock.instrument_id}
+                  symbol={stock.symbol}
+                  name={stock.name}
+                  sector={stock.sector}
+                  metrics={rowToMetrics(stock, dataAsOf)}
+                  narrative={null}
+                  dataAsOf={dataAsOf}
+                />
+              ))}
+            </div>
+          </div>
+          {hasMore && (
+            <div style={{ textAlign: "center", padding: "16px" }}>
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-default)",
+                  background: "var(--bg-surface)",
+                  color: "var(--text-primary)",
+                  fontSize: "13px",
+                  cursor: loadingMore ? "not-allowed" : "pointer",
+                  opacity: loadingMore ? 0.6 : 1,
+                }}
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {error && (
+        <div style={{ padding: "40px", textAlign: "center", color: "var(--rag-red-700)" }}>
+          Failed to load data. <button onClick={() => window.location.reload()}>Retry</button>
+        </div>
+      )}
+
+      {!loading && !error && rows.length === 0 && (
+        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-tertiary)" }}>No stocks found in this sector.</div>
+      )}
+
+      {loading && (
+        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-tertiary)" }}>Loading sector…</div>
+      )}
+    </div>
+  );
 }

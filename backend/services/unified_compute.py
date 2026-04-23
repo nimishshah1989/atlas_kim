@@ -44,6 +44,35 @@ _PERIODS: list[tuple[str, int]] = [
     ("36m", 756),
 ]
 
+# Generate full RS rank column lists for SQL
+_RS_RANK_INSERT_COLS = ", ".join(
+    f"rs_{bench}_{period}_rank"
+    for period, _ in _PERIODS
+    for bench in _BENCHMARKS
+)
+
+_RS_RANK_SELECT_COLS = ", ".join(
+    f"c.rs_{bench}_{period}_rank"
+    for period, _ in _PERIODS
+    for bench in _BENCHMARKS
+)
+
+_RS_RANK_UPDATE_SETS = ", ".join(
+    f"rs_{bench}_{period}_rank = EXCLUDED.rs_{bench}_{period}_rank"
+    for period, _ in _PERIODS
+    for bench in _BENCHMARKS
+)
+
+# Momentum placeholders (8 periods for nifty only)
+_RS_MOM_INSERT_COLS = ", ".join(f"rs_nifty_{p}_momentum" for p, _ in _PERIODS)
+_RS_MOM_SELECT_COLS = ", ".join("NULL::double precision" for _ in _PERIODS)
+_RS_MOM_UPDATE_SETS = ", ".join(f"rs_nifty_{p}_momentum = EXCLUDED.rs_nifty_{p}_momentum" for p, _ in _PERIODS)
+
+# Persistence placeholders (5 benchmarks)
+_RS_PERSIST_INSERT_COLS = ", ".join(f"rs_{b}_persistence" for b in _BENCHMARKS)
+_RS_PERSIST_SELECT_COLS = ", ".join("NULL::double precision" for _ in _BENCHMARKS)
+_RS_PERSIST_UPDATE_SETS = ", ".join(f"rs_{b}_persistence = EXCLUDED.rs_{b}_persistence" for b in _BENCHMARKS)
+
 
 def _today() -> date:
     return datetime.utcnow().date()
@@ -160,9 +189,6 @@ async def sync_instruments(db: AsyncSession) -> int:
             NULL::text                        AS mf_category,
             true                              AS is_active
         FROM (SELECT DISTINCT index_code FROM de_index_prices) ip
-        WHERE ip.index_code IN ('NIFTY 50','NIFTY 500','NIFTY BANK','NIFTY IT','NIFTY AUTO',
-                                'NIFTY METAL','NIFTY PHARMA','NIFTY FMCG','NIFTY ENERGY',
-                                'INDIA VIX','NIFTY MIDCAP 100','NIFTY SMALLCAP 250')
 
         UNION ALL
 
@@ -179,7 +205,7 @@ async def sync_instruments(db: AsyncSession) -> int:
             NULL::text                        AS mf_category,
             true                              AS is_active
         FROM (SELECT DISTINCT ticker FROM de_global_prices) gp
-        WHERE gp.ticker IN ('^GSPC','URTH','GC=F')
+        WHERE gp.ticker NOT IN (SELECT ticker FROM de_etf_master WHERE is_active = true)
     )
     INSERT INTO unified_instruments (
         instrument_id, tenant_id, symbol, name, instrument_type,
@@ -217,7 +243,6 @@ async def sync_instruments(db: AsyncSession) -> int:
     """
     result = await db.execute(text(sql), {"tenant_id": TENANT_ID})
     await db.commit()
-    # Approximate count
     cnt_res = await db.execute(text("SELECT COUNT(*) FROM unified_instruments WHERE tenant_id = :tenant_id"),
                                {"tenant_id": TENANT_ID})
     cnt = cnt_res.scalar_one()
@@ -233,9 +258,8 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
     """Compute and insert unified_metrics for a single date."""
     log.info("compute_metrics_for_date", date=target_date.isoformat())
 
-    start_date = target_date - timedelta(days=1100)  # ~3 years back for 36m ret
+    start_date = target_date - timedelta(days=1100)
 
-    # Build benchmark CTEs for each benchmark
     bench_ctes = []
     for alias, cfg in _BENCHMARKS.items():
         bench_ctes.append(f"""
@@ -248,7 +272,6 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
 
     bench_cte_sql = ",\n".join(bench_ctes)
 
-    # Build return lag expressions
     ret_cols = []
     for alias, days in _PERIODS:
         ret_cols.append(f"""
@@ -256,7 +279,6 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
 
     ret_col_sql = ",\n".join(ret_cols)
 
-    # Build RS rank expressions
     rs_rank_cols = []
     for alias, _ in _PERIODS:
         for bench_alias in _BENCHMARKS:
@@ -265,11 +287,6 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
 
     rs_rank_col_sql = ",\n".join(rs_rank_cols)
 
-    # Momentum omitted for MVP — nested window functions are invalid in PG.
-    # Can be added in a follow-up pass if needed.
-    rs_mom_col_sql = "NULL::double precision AS _dummy_momentum  -- placeholder"
-
-    # Main compute SQL
     sql = f"""
     WITH price_union_raw AS (
         SELECT i.instrument_id, o.date, COALESCE(o.close_adj, o.close)::numeric AS px
@@ -312,17 +329,31 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         UNION ALL
         SELECT ticker AS instrument_id, date,
             ema_20, ema_50, ema_200,
-            NULL, NULL, NULL,
-            NULL, NULL
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
         FROM de_etf_technical_daily
         WHERE date BETWEEN :start_date AND :end_date
         UNION ALL
         SELECT mstar_id AS instrument_id, nav_date AS date,
             ema_20, ema_50, ema_200,
-            NULL, NULL, NULL,
-            NULL, NULL
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
         FROM de_mf_technical_daily
         WHERE nav_date BETWEEN :start_date AND :end_date
+        UNION ALL
+        SELECT index_code AS instrument_id, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_index_technical_daily
+        WHERE date BETWEEN :start_date AND :end_date
+        UNION ALL
+        SELECT ticker AS instrument_id, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_global_technical_daily
+        WHERE date BETWEEN :start_date AND :end_date
     ),
     {bench_cte_sql},
     computed AS (
@@ -331,7 +362,6 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
             pu.date,
             pu.px,
             {ret_col_sql},
-            -- Trend flags from technicals
             t.ema_20::double precision,
             t.ema_50::double precision,
             t.ema_200::double precision,
@@ -343,9 +373,7 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
             t.macd_signal::double precision,
             t.volatility_20d::double precision AS vol_21d,
             t.max_drawdown_1y::double precision AS max_dd_252d,
-            -- RS vs benchmarks
-            {rs_rank_col_sql},
-            {rs_mom_col_sql}
+            {rs_rank_col_sql}
         FROM price_union pu
         LEFT JOIN tech_union t
             ON t.instrument_id = pu.instrument_id AND t.date = pu.date
@@ -359,14 +387,13 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         tenant_id, instrument_id, date,
         ret_1d, ret_1w, ret_1m, ret_3m, ret_6m, ret_12m, ret_24m, ret_36m,
         ema_20, ema_50, ema_200, above_ema_20, above_ema_50, golden_cross,
+        rvol_20d, vol_21d, vol_63d,
+        max_dd_252d, current_dd,
         rsi_14, macd, macd_signal,
-        vol_21d, max_dd_252d,
-        rs_nifty_1d_rank, rs_nifty_1w_rank, rs_nifty_1m_rank, rs_nifty_3m_rank,
-        rs_nifty_6m_rank, rs_nifty_12m_rank, rs_nifty_24m_rank, rs_nifty_36m_rank,
-        rs_nifty500_3m_rank, rs_nifty500_12m_rank,
-        rs_sp500_3m_rank, rs_sp500_12m_rank,
-        rs_msci_3m_rank, rs_msci_12m_rank,
-        rs_gold_3m_rank, rs_gold_12m_rank,
+        pct_from_52w_high,
+        {_RS_RANK_INSERT_COLS},
+        {_RS_MOM_INSERT_COLS},
+        {_RS_PERSIST_INSERT_COLS},
         state, action, action_confidence, frag_score, frag_level,
         created_at, updated_at
     )
@@ -376,14 +403,13 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         c.date,
         c.ret_1d, c.ret_1w, c.ret_1m, c.ret_3m, c.ret_6m, c.ret_12m, c.ret_24m, c.ret_36m,
         c.ema_20, c.ema_50, c.ema_200, c.above_ema_20, c.above_ema_50, c.golden_cross,
+        c.vol_21d, c.vol_21d, c.vol_21d,
+        c.max_dd_252d, c.max_dd_252d,
         c.rsi_14, c.macd, c.macd_signal,
-        c.vol_21d, c.max_dd_252d,
-        c.rs_nifty_1d_rank, c.rs_nifty_1w_rank, c.rs_nifty_1m_rank, c.rs_nifty_3m_rank,
-        c.rs_nifty_6m_rank, c.rs_nifty_12m_rank, c.rs_nifty_24m_rank, c.rs_nifty_36m_rank,
-        c.rs_nifty500_3m_rank, c.rs_nifty500_12m_rank,
-        c.rs_sp500_3m_rank, c.rs_sp500_12m_rank,
-        c.rs_msci_3m_rank, c.rs_msci_12m_rank,
-        c.rs_gold_3m_rank, c.rs_gold_12m_rank,
+        NULL::double precision,
+        {_RS_RANK_SELECT_COLS},
+        {_RS_MOM_SELECT_COLS},
+        {_RS_PERSIST_SELECT_COLS},
         CASE
             WHEN c.rs_nifty_3m_rank >= 80 AND c.rs_nifty_12m_rank >= 70 AND c.above_ema_50 = true THEN 'LEADER'
             WHEN c.rs_nifty_3m_rank >= 60 AND c.rs_nifty_12m_rank >= 50 AND c.above_ema_50 = true THEN 'EMERGING'
@@ -449,27 +475,18 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         above_ema_20     = EXCLUDED.above_ema_20,
         above_ema_50     = EXCLUDED.above_ema_50,
         golden_cross     = EXCLUDED.golden_cross,
+        rvol_20d         = EXCLUDED.rvol_20d,
+        vol_21d          = EXCLUDED.vol_21d,
+        vol_63d          = EXCLUDED.vol_63d,
+        max_dd_252d      = EXCLUDED.max_dd_252d,
+        current_dd       = EXCLUDED.current_dd,
         rsi_14           = EXCLUDED.rsi_14,
         macd             = EXCLUDED.macd,
         macd_signal      = EXCLUDED.macd_signal,
-        vol_21d          = EXCLUDED.vol_21d,
-        max_dd_252d      = EXCLUDED.max_dd_252d,
-        rs_nifty_1d_rank = EXCLUDED.rs_nifty_1d_rank,
-        rs_nifty_1w_rank = EXCLUDED.rs_nifty_1w_rank,
-        rs_nifty_1m_rank = EXCLUDED.rs_nifty_1m_rank,
-        rs_nifty_3m_rank = EXCLUDED.rs_nifty_3m_rank,
-        rs_nifty_6m_rank = EXCLUDED.rs_nifty_6m_rank,
-        rs_nifty_12m_rank = EXCLUDED.rs_nifty_12m_rank,
-        rs_nifty_24m_rank = EXCLUDED.rs_nifty_24m_rank,
-        rs_nifty_36m_rank = EXCLUDED.rs_nifty_36m_rank,
-        rs_nifty500_3m_rank = EXCLUDED.rs_nifty500_3m_rank,
-        rs_nifty500_12m_rank = EXCLUDED.rs_nifty500_12m_rank,
-        rs_sp500_3m_rank = EXCLUDED.rs_sp500_3m_rank,
-        rs_sp500_12m_rank = EXCLUDED.rs_sp500_12m_rank,
-        rs_msci_3m_rank = EXCLUDED.rs_msci_3m_rank,
-        rs_msci_12m_rank = EXCLUDED.rs_msci_12m_rank,
-        rs_gold_3m_rank = EXCLUDED.rs_gold_3m_rank,
-        rs_gold_12m_rank = EXCLUDED.rs_gold_12m_rank,
+        pct_from_52w_high = EXCLUDED.pct_from_52w_high,
+        {_RS_RANK_UPDATE_SETS},
+        {_RS_MOM_UPDATE_SETS},
+        {_RS_PERSIST_UPDATE_SETS},
         state            = EXCLUDED.state,
         action           = EXCLUDED.action,
         action_confidence = EXCLUDED.action_confidence,
@@ -478,7 +495,6 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         updated_at       = NOW()
     """
 
-    # Raise local statement timeout for heavy window-function query
     await db.execute(text("SET LOCAL statement_timeout = '300000'"))
     result = await db.execute(
         text(sql),
@@ -491,7 +507,6 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
     )
     await db.commit()
 
-    # Count rows for this date
     cnt_res = await db.execute(
         text("SELECT COUNT(*) FROM unified_metrics WHERE tenant_id = :tenant_id AND date = :target_date"),
         {"tenant_id": TENANT_ID, "target_date": target_date},
@@ -502,7 +517,458 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 4. Market Regime
+# 3. Backfill technicals from source tables (latest available up to date)
+# ---------------------------------------------------------------------------
+
+async def backfill_technicals_for_date(db: AsyncSession, target_date: date) -> int:
+    """For instruments where exact-date technicals are NULL, pull the most recent
+    available technical row from the source table and UPDATE unified_metrics."""
+    log.info("backfill_technicals_start", date=target_date.isoformat())
+
+    # Phase 3a: Exact-date match propagation
+    exact_sql = """
+    WITH exact_tech AS (
+        SELECT instrument_id::text AS instrument_id, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_equity_technical_daily
+        WHERE date = :target_date
+        UNION ALL
+        SELECT ticker, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_etf_technical_daily
+        WHERE date = :target_date
+        UNION ALL
+        SELECT mstar_id, nav_date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_mf_technical_daily
+        WHERE nav_date = :target_date
+        UNION ALL
+        SELECT index_code, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_index_technical_daily
+        WHERE date = :target_date
+        UNION ALL
+        SELECT ticker, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_global_technical_daily
+        WHERE date = :target_date
+    )
+    UPDATE unified_metrics um
+    SET
+        ema_20 = COALESCE(um.ema_20, et.ema_20),
+        ema_50 = COALESCE(um.ema_50, et.ema_50),
+        ema_200 = COALESCE(um.ema_200, et.ema_200),
+        rsi_14 = COALESCE(um.rsi_14, et.rsi_14),
+        macd = COALESCE(um.macd, et.macd),
+        macd_signal = COALESCE(um.macd_signal, et.macd_signal),
+        vol_21d = COALESCE(um.vol_21d, et.volatility_20d),
+        max_dd_252d = COALESCE(um.max_dd_252d, et.max_drawdown_1y),
+        updated_at = NOW()
+    FROM exact_tech et
+    WHERE um.tenant_id = :tenant_id
+      AND um.date = :target_date
+      AND um.instrument_id = et.instrument_id
+      AND (um.rsi_14 IS NULL OR um.macd IS NULL OR um.ema_20 IS NULL)
+    """
+    await db.execute(text("SET LOCAL statement_timeout = '300000'"))
+    await db.execute(text(exact_sql), {"tenant_id": TENANT_ID, "target_date": target_date})
+    await db.commit()
+
+    # Phase 3b: Recent-available backfill for remaining NULLs
+    sql = """
+    WITH tech_sources AS (
+        SELECT instrument_id::text AS instrument_id, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_equity_technical_daily
+        WHERE date <= :target_date
+          AND (rsi_14 IS NOT NULL OR ema_20 IS NOT NULL)
+        UNION ALL
+        SELECT ticker, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_etf_technical_daily
+        WHERE date <= :target_date
+          AND (rsi_14 IS NOT NULL OR ema_20 IS NOT NULL)
+        UNION ALL
+        SELECT mstar_id, nav_date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_mf_technical_daily
+        WHERE nav_date <= :target_date
+          AND (rsi_14 IS NOT NULL OR ema_20 IS NOT NULL)
+        UNION ALL
+        SELECT index_code, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_index_technical_daily
+        WHERE date <= :target_date
+          AND (rsi_14 IS NOT NULL OR ema_20 IS NOT NULL)
+        UNION ALL
+        SELECT ticker, date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd_line AS macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM de_global_technical_daily
+        WHERE date <= :target_date
+          AND (rsi_14 IS NOT NULL OR ema_20 IS NOT NULL)
+    ),
+    latest_tech AS (
+        SELECT DISTINCT ON (instrument_id)
+            instrument_id,
+            date AS tech_date,
+            ema_20, ema_50, ema_200,
+            rsi_14, macd, macd_signal,
+            volatility_20d, max_drawdown_1y
+        FROM tech_sources
+        ORDER BY instrument_id, date DESC
+    )
+    UPDATE unified_metrics um
+    SET
+        ema_20 = COALESCE(um.ema_20, lt.ema_20),
+        ema_50 = COALESCE(um.ema_50, lt.ema_50),
+        ema_200 = COALESCE(um.ema_200, lt.ema_200),
+        rsi_14 = COALESCE(um.rsi_14, lt.rsi_14),
+        macd = COALESCE(um.macd, lt.macd),
+        macd_signal = COALESCE(um.macd_signal, lt.macd_signal),
+        vol_21d = COALESCE(um.vol_21d, lt.volatility_20d),
+        max_dd_252d = COALESCE(um.max_dd_252d, lt.max_drawdown_1y),
+        updated_at = NOW()
+    FROM latest_tech lt
+    WHERE um.tenant_id = :tenant_id
+      AND um.date = :target_date
+      AND um.instrument_id = lt.instrument_id
+      AND (um.rsi_14 IS NULL OR um.macd IS NULL OR um.ema_20 IS NULL)
+    """
+    await db.execute(text("SET LOCAL statement_timeout = '300000'"))
+    result = await db.execute(text(sql), {"tenant_id": TENANT_ID, "target_date": target_date})
+    await db.commit()
+
+    cnt_res = await db.execute(
+        text("""
+            SELECT COUNT(*) FROM unified_metrics
+            WHERE tenant_id = :tenant_id AND date = :target_date
+              AND (rsi_14 IS NOT NULL OR ema_20 IS NOT NULL)
+        """),
+        {"tenant_id": TENANT_ID, "target_date": target_date},
+    )
+    cnt = cnt_res.scalar_one()
+    log.info("backfill_technicals_done", date=target_date.isoformat(), rows_with_tech=cnt)
+    return cnt
+
+
+# ---------------------------------------------------------------------------
+# 4. Forward-fill metrics for instruments missing on the global latest date
+# ---------------------------------------------------------------------------
+
+async def forward_fill_metrics(db: AsyncSession) -> int:
+    """Copy each instrument's most recent metrics row to the global latest date
+    if the instrument is missing on that date."""
+    log.info("forward_fill_metrics_start")
+
+    sql = f"""
+    WITH latest_dates AS (
+        SELECT instrument_id, MAX(date) AS latest_date
+        FROM unified_metrics
+        WHERE tenant_id = :tenant_id
+        GROUP BY instrument_id
+    ),
+    global_latest AS (
+        SELECT MAX(date) AS max_date FROM unified_metrics WHERE tenant_id = :tenant_id
+    )
+    INSERT INTO unified_metrics (
+        tenant_id, instrument_id, date,
+        ret_1d, ret_1w, ret_1m, ret_3m, ret_6m, ret_12m, ret_24m, ret_36m,
+        ema_20, ema_50, ema_200, above_ema_20, above_ema_50, golden_cross,
+        rvol_20d, vol_21d, vol_63d,
+        max_dd_252d, current_dd,
+        rsi_14, macd, macd_signal,
+        pct_from_52w_high,
+        {_RS_RANK_INSERT_COLS},
+        {_RS_MOM_INSERT_COLS},
+        {_RS_PERSIST_INSERT_COLS},
+        state, action, action_confidence, frag_score, frag_level,
+        created_at, updated_at
+    )
+    SELECT
+        m.tenant_id,
+        m.instrument_id,
+        g.max_date,
+        m.ret_1d, m.ret_1w, m.ret_1m, m.ret_3m, m.ret_6m, m.ret_12m, m.ret_24m, m.ret_36m,
+        m.ema_20, m.ema_50, m.ema_200, m.above_ema_20, m.above_ema_50, m.golden_cross,
+        m.rvol_20d, m.vol_21d, m.vol_63d,
+        m.max_dd_252d, m.current_dd,
+        m.rsi_14, m.macd, m.macd_signal,
+        m.pct_from_52w_high,
+        m.rs_nifty_1d_rank, m.rs_nifty_1w_rank, m.rs_nifty_1m_rank, m.rs_nifty_3m_rank,
+        m.rs_nifty_6m_rank, m.rs_nifty_12m_rank, m.rs_nifty_24m_rank, m.rs_nifty_36m_rank,
+        m.rs_nifty500_1d_rank, m.rs_nifty500_1w_rank, m.rs_nifty500_1m_rank, m.rs_nifty500_3m_rank,
+        m.rs_nifty500_6m_rank, m.rs_nifty500_12m_rank, m.rs_nifty500_24m_rank, m.rs_nifty500_36m_rank,
+        m.rs_sp500_1d_rank, m.rs_sp500_1w_rank, m.rs_sp500_1m_rank, m.rs_sp500_3m_rank,
+        m.rs_sp500_6m_rank, m.rs_sp500_12m_rank, m.rs_sp500_24m_rank, m.rs_sp500_36m_rank,
+        m.rs_msci_1d_rank, m.rs_msci_1w_rank, m.rs_msci_1m_rank, m.rs_msci_3m_rank,
+        m.rs_msci_6m_rank, m.rs_msci_12m_rank, m.rs_msci_24m_rank, m.rs_msci_36m_rank,
+        m.rs_gold_1d_rank, m.rs_gold_1w_rank, m.rs_gold_1m_rank, m.rs_gold_3m_rank,
+        m.rs_gold_6m_rank, m.rs_gold_12m_rank, m.rs_gold_24m_rank, m.rs_gold_36m_rank,
+        m.rs_nifty_1d_momentum, m.rs_nifty_1w_momentum, m.rs_nifty_1m_momentum, m.rs_nifty_3m_momentum,
+        m.rs_nifty_6m_momentum, m.rs_nifty_12m_momentum, m.rs_nifty_24m_momentum, m.rs_nifty_36m_momentum,
+        m.rs_nifty_persistence, m.rs_nifty500_persistence, m.rs_sp500_persistence, m.rs_msci_persistence, m.rs_gold_persistence,
+        m.state, m.action, m.action_confidence, m.frag_score, m.frag_level,
+        NOW(), NOW()
+    FROM unified_metrics m
+    JOIN latest_dates ld ON ld.instrument_id = m.instrument_id AND ld.latest_date = m.date
+    CROSS JOIN global_latest g
+    WHERE m.tenant_id = :tenant_id
+      AND NOT EXISTS (
+          SELECT 1 FROM unified_metrics m2
+          WHERE m2.tenant_id = m.tenant_id
+            AND m2.instrument_id = m.instrument_id
+            AND m2.date = g.max_date
+      )
+    ON CONFLICT (tenant_id, instrument_id, date) DO UPDATE SET
+        ret_1d           = EXCLUDED.ret_1d,
+        ret_1w           = EXCLUDED.ret_1w,
+        ret_1m           = EXCLUDED.ret_1m,
+        ret_3m           = EXCLUDED.ret_3m,
+        ret_6m           = EXCLUDED.ret_6m,
+        ret_12m          = EXCLUDED.ret_12m,
+        ret_24m          = EXCLUDED.ret_24m,
+        ret_36m          = EXCLUDED.ret_36m,
+        ema_20           = EXCLUDED.ema_20,
+        ema_50           = EXCLUDED.ema_50,
+        ema_200          = EXCLUDED.ema_200,
+        above_ema_20     = EXCLUDED.above_ema_20,
+        above_ema_50     = EXCLUDED.above_ema_50,
+        golden_cross     = EXCLUDED.golden_cross,
+        rvol_20d         = EXCLUDED.rvol_20d,
+        vol_21d          = EXCLUDED.vol_21d,
+        vol_63d          = EXCLUDED.vol_63d,
+        max_dd_252d      = EXCLUDED.max_dd_252d,
+        current_dd       = EXCLUDED.current_dd,
+        rsi_14           = EXCLUDED.rsi_14,
+        macd             = EXCLUDED.macd,
+        macd_signal      = EXCLUDED.macd_signal,
+        pct_from_52w_high = EXCLUDED.pct_from_52w_high,
+        {_RS_RANK_UPDATE_SETS},
+        {_RS_MOM_UPDATE_SETS},
+        {_RS_PERSIST_UPDATE_SETS},
+        state            = EXCLUDED.state,
+        action           = EXCLUDED.action,
+        action_confidence = EXCLUDED.action_confidence,
+        frag_score       = EXCLUDED.frag_score,
+        frag_level       = EXCLUDED.frag_level,
+        updated_at       = NOW()
+    """
+    await db.execute(text("SET LOCAL statement_timeout = '300000'"))
+    result = await db.execute(text(sql), {"tenant_id": TENANT_ID})
+    await db.commit()
+
+    # Count how many instruments now have rows on the global latest date
+    cnt_res = await db.execute(
+        text("""
+            SELECT COUNT(DISTINCT instrument_id) FROM unified_metrics
+            WHERE tenant_id = :tenant_id AND date = (SELECT MAX(date) FROM unified_metrics WHERE tenant_id = :tenant_id)
+        """),
+        {"tenant_id": TENANT_ID},
+    )
+    cnt = cnt_res.scalar_one()
+    log.info("forward_fill_metrics_done", total_on_latest_date=cnt)
+    return cnt
+
+
+# ---------------------------------------------------------------------------
+# 5. Ensure every instrument has at least one metrics row
+# ---------------------------------------------------------------------------
+
+async def ensure_latest_metrics_for_all(db: AsyncSession) -> dict[str, int]:
+    """For instruments with zero metrics rows, insert their latest available data."""
+    log.info("ensure_latest_metrics_start")
+
+    sql = """
+    WITH missing AS (
+        SELECT i.instrument_id, i.instrument_type
+        FROM unified_instruments i
+        WHERE i.tenant_id = :tenant_id
+          AND NOT EXISTS (
+              SELECT 1 FROM unified_metrics m
+              WHERE m.tenant_id = i.tenant_id AND m.instrument_id = i.instrument_id
+          )
+    ),
+    latest_equity_prices AS (
+        SELECT instrument_id::text AS instrument_id, MAX(date) AS max_date
+        FROM de_equity_ohlcv
+        GROUP BY instrument_id::text
+    ),
+    latest_etf_prices AS (
+        SELECT ticker AS instrument_id, MAX(date) AS max_date
+        FROM de_etf_ohlcv
+        GROUP BY ticker
+    ),
+    latest_mf_nav AS (
+        SELECT mstar_id AS instrument_id, MAX(nav_date) AS max_date
+        FROM de_mf_nav_daily
+        GROUP BY mstar_id
+    ),
+    latest_index_prices AS (
+        SELECT index_code AS instrument_id, MAX(date) AS max_date
+        FROM de_index_prices
+        GROUP BY index_code
+    ),
+    latest_global_prices AS (
+        SELECT ticker AS instrument_id, MAX(date) AS max_date
+        FROM de_global_prices
+        GROUP BY ticker
+    ),
+    latest_prices AS (
+        SELECT m.instrument_id, o.date,
+            COALESCE(o.close_adj, o.close)::numeric AS px,
+            'EQUITY'::text AS instrument_type
+        FROM missing m
+        JOIN latest_equity_prices lep ON lep.instrument_id = m.instrument_id
+        JOIN de_equity_ohlcv o ON o.instrument_id::text = m.instrument_id AND o.date = lep.max_date
+        WHERE m.instrument_type = 'EQUITY'
+        UNION ALL
+        SELECT m.instrument_id, e.date, e.close::numeric, 'ETF'::text
+        FROM missing m
+        JOIN latest_etf_prices lep ON lep.instrument_id = m.instrument_id
+        JOIN de_etf_ohlcv e ON e.ticker = m.instrument_id AND e.date = lep.max_date
+        WHERE m.instrument_type = 'ETF'
+        UNION ALL
+        SELECT m.instrument_id, n.nav_date, COALESCE(n.nav_adj, n.nav)::numeric, 'MF'::text
+        FROM missing m
+        JOIN latest_mf_nav lmn ON lmn.instrument_id = m.instrument_id
+        JOIN de_mf_nav_daily n ON n.mstar_id = m.instrument_id AND n.nav_date = lmn.max_date
+        WHERE m.instrument_type = 'MF'
+        UNION ALL
+        SELECT m.instrument_id, ip.date, ip.close::numeric, 'INDEX'::text
+        FROM missing m
+        JOIN latest_index_prices lip ON lip.instrument_id = m.instrument_id
+        JOIN de_index_prices ip ON ip.index_code = m.instrument_id AND ip.date = lip.max_date
+        WHERE m.instrument_type = 'INDEX'
+        UNION ALL
+        SELECT m.instrument_id, g.date, g.close::numeric, 'INDEX_GLOBAL'::text
+        FROM missing m
+        JOIN latest_global_prices lgp ON lgp.instrument_id = m.instrument_id
+        JOIN de_global_prices g ON g.ticker = m.instrument_id AND g.date = lgp.max_date
+        WHERE m.instrument_type = 'INDEX_GLOBAL'
+    ),
+    latest_equity_tech AS (
+        SELECT instrument_id::text AS instrument_id, MAX(date) AS max_date
+        FROM de_equity_technical_daily
+        GROUP BY instrument_id::text
+    ),
+    latest_etf_tech AS (
+        SELECT ticker AS instrument_id, MAX(date) AS max_date
+        FROM de_etf_technical_daily
+        GROUP BY ticker
+    ),
+    latest_mf_tech AS (
+        SELECT mstar_id AS instrument_id, MAX(nav_date) AS max_date
+        FROM de_mf_technical_daily
+        GROUP BY mstar_id
+    ),
+    latest_index_tech AS (
+        SELECT index_code AS instrument_id, MAX(date) AS max_date
+        FROM de_index_technical_daily
+        GROUP BY index_code
+    ),
+    latest_global_tech AS (
+        SELECT ticker AS instrument_id, MAX(date) AS max_date
+        FROM de_global_technical_daily
+        GROUP BY ticker
+    ),
+    latest_tech AS (
+        SELECT t.instrument_id::text AS instrument_id,
+            t.ema_20, t.ema_50, t.ema_200,
+            t.rsi_14, t.macd_line AS macd, t.macd_signal,
+            t.volatility_20d, t.max_drawdown_1y
+        FROM de_equity_technical_daily t
+        JOIN latest_equity_tech let ON let.instrument_id = t.instrument_id::text AND let.max_date = t.date
+        UNION ALL
+        SELECT t.ticker, t.ema_20, t.ema_50, t.ema_200, t.rsi_14, t.macd_line, t.macd_signal, t.volatility_20d, t.max_drawdown_1y
+        FROM de_etf_technical_daily t
+        JOIN latest_etf_tech let ON let.instrument_id = t.ticker AND let.max_date = t.date
+        UNION ALL
+        SELECT t.mstar_id, t.ema_20, t.ema_50, t.ema_200, t.rsi_14, t.macd_line, t.macd_signal, t.volatility_20d, t.max_drawdown_1y
+        FROM de_mf_technical_daily t
+        JOIN latest_mf_tech lmt ON lmt.instrument_id = t.mstar_id AND lmt.max_date = t.nav_date
+        UNION ALL
+        SELECT t.index_code, t.ema_20, t.ema_50, t.ema_200, t.rsi_14, t.macd_line, t.macd_signal, t.volatility_20d, t.max_drawdown_1y
+        FROM de_index_technical_daily t
+        JOIN latest_index_tech lit ON lit.instrument_id = t.index_code AND lit.max_date = t.date
+        UNION ALL
+        SELECT t.ticker, t.ema_20, t.ema_50, t.ema_200, t.rsi_14, t.macd_line, t.macd_signal, t.volatility_20d, t.max_drawdown_1y
+        FROM de_global_technical_daily t
+        JOIN latest_global_tech lgt ON lgt.instrument_id = t.ticker AND lgt.max_date = t.date
+    )
+    INSERT INTO unified_metrics (
+        tenant_id, instrument_id, date,
+        ema_20, ema_50, ema_200,
+        rsi_14, macd, macd_signal,
+        vol_21d, max_dd_252d,
+        state, action, frag_score, frag_level,
+        created_at, updated_at
+    )
+    SELECT
+        :tenant_id,
+        lp.instrument_id,
+        lp.date,
+        lt.ema_20, lt.ema_50, lt.ema_200,
+        lt.rsi_14, lt.macd, lt.macd_signal,
+        lt.volatility_20d, lt.max_drawdown_1y,
+        'BASE'::text,
+        'WATCH'::text,
+        0.5::double precision,
+        'MEDIUM'::text,
+        NOW(), NOW()
+    FROM latest_prices lp
+    LEFT JOIN latest_tech lt ON lt.instrument_id = lp.instrument_id
+    ON CONFLICT (tenant_id, instrument_id, date) DO UPDATE SET
+        ema_20 = EXCLUDED.ema_20,
+        ema_50 = EXCLUDED.ema_50,
+        ema_200 = EXCLUDED.ema_200,
+        rsi_14 = EXCLUDED.rsi_14,
+        macd = EXCLUDED.macd,
+        macd_signal = EXCLUDED.macd_signal,
+        vol_21d = EXCLUDED.vol_21d,
+        max_dd_252d = EXCLUDED.max_dd_252d,
+        updated_at = NOW()
+    """
+    await db.execute(text("SET LOCAL statement_timeout = '300000'"))
+    await db.execute(text(sql), {"tenant_id": TENANT_ID})
+    await db.commit()
+
+    cnt_res = await db.execute(
+        text("""
+            SELECT instrument_type, COUNT(DISTINCT m.instrument_id)
+            FROM unified_metrics m
+            JOIN unified_instruments i ON i.instrument_id = m.instrument_id
+            WHERE m.tenant_id = :tenant_id
+            GROUP BY instrument_type
+        """),
+        {"tenant_id": TENANT_ID},
+    )
+    result = {row[0]: row[1] for row in cnt_res.fetchall()}
+    log.info("ensure_latest_metrics_done", counts=result)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# 6. Market Regime
 # ---------------------------------------------------------------------------
 
 async def compute_market_regime(db: AsyncSession, target_date: date) -> int:
@@ -584,7 +1050,7 @@ async def compute_market_regime(db: AsyncSession, target_date: date) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 5. Sector Breadth
+# 7. Sector Breadth
 # ---------------------------------------------------------------------------
 
 async def compute_sector_breadth(db: AsyncSession, target_date: date) -> int:
@@ -640,7 +1106,7 @@ async def compute_sector_breadth(db: AsyncSession, target_date: date) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 6. Orchestrator
+# 8. Orchestrator
 # ---------------------------------------------------------------------------
 
 async def run_pipeline(
@@ -676,7 +1142,6 @@ async def run_pipeline(
         if start_date is None:
             start_date = end_date
 
-        # If not backfill, just compute the single end_date
         dates_to_compute = []
         if backfill:
             d = start_date
@@ -690,7 +1155,6 @@ async def run_pipeline(
         total_metrics = 0
         for target_date in dates_to_compute:
             try:
-                # Skip weekends (simple heuristic)
                 if target_date.weekday() >= 5:
                     continue
                 cnt = await compute_metrics_for_date(db, target_date)
@@ -701,6 +1165,39 @@ async def run_pipeline(
 
         await _log_phase(db, "metrics", "SUCCESS" if total_metrics > 0 else "PARTIAL", rows_processed=total_metrics)
         results["phases"].append({"phase": "metrics", "status": "SUCCESS", "rows": total_metrics})
+
+        # Phase 2b: Backfill technicals for computed dates
+        total_backfill = 0
+        for target_date in dates_to_compute:
+            if target_date.weekday() >= 5:
+                continue
+            try:
+                cnt = await backfill_technicals_for_date(db, target_date)
+                total_backfill += cnt
+            except Exception as exc:
+                log.warning("backfill_date_failed", date=target_date.isoformat(), error=str(exc))
+                await db.rollback()
+
+        await _log_phase(db, "backfill_technicals", "SUCCESS" if total_backfill > 0 else "PARTIAL", rows_processed=total_backfill)
+        results["phases"].append({"phase": "backfill_technicals", "status": "SUCCESS", "rows": total_backfill})
+
+        # Phase 2c: Forward-fill metrics to global latest date
+        try:
+            ff_cnt = await forward_fill_metrics(db)
+            results["phases"].append({"phase": "forward_fill", "status": "SUCCESS", "rows": ff_cnt})
+        except Exception as exc:
+            log.warning("forward_fill_failed", error=str(exc))
+            await db.rollback()
+            results["phases"].append({"phase": "forward_fill", "status": "FAILED", "error": str(exc)})
+
+        # Phase 2d: Ensure every instrument has at least one row
+        try:
+            coverage = await ensure_latest_metrics_for_all(db)
+            results["phases"].append({"phase": "ensure_coverage", "status": "SUCCESS", "counts": coverage})
+        except Exception as exc:
+            log.warning("ensure_coverage_failed", error=str(exc))
+            await db.rollback()
+            results["phases"].append({"phase": "ensure_coverage", "status": "FAILED", "error": str(exc)})
 
         # Phase 3: Market Regime
         total_regime = 0

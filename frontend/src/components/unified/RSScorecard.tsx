@@ -12,7 +12,7 @@ interface RSScorecardProps {
 }
 
 const PERIODS = ["1w", "1m", "3m", "6m", "12m"];
-const BENCHMARKS = ["NIFTY_50", "NIFTY_100", "NIFTY_200", "NIFTY_500", "NIFTY_MIDCAP_100", "NIFTY_SMALLCAP_100", "NIFTY_TOTAL_MKT"];
+const BENCHMARKS = ["NIFTY_50", "NIFTY_500", "SP500", "MSCI", "GOLD"];
 
 export default function RSScorecard({ scores }: RSScorecardProps) {
   const lookup = new Map<string, ScoreCell>();

@@ -1,13 +1,33 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUnifiedData } from "@/hooks/useUnifiedData";
 import BubbleChart from "@/components/unified/BubbleChart";
 import DataFreshness from "@/components/unified/DataFreshness";
 import Link from "next/link";
 import type { AggregateResponse } from "@/lib/api-unified";
 
+const BENCHMARK_OPTIONS = [
+  { value: "nifty", label: "Nifty 50" },
+  { value: "nifty500", label: "Nifty 500" },
+  { value: "sp500", label: "S&P 500" },
+  { value: "msci", label: "MSCI World" },
+  { value: "gold", label: "Gold" },
+];
+
+const PERIOD_OPTIONS = ["1m", "3m", "6m", "12m"];
+
 export default function SectorsPage() {
-  const { data: bubble, state, meta } = useUnifiedData<AggregateResponse>("/api/unified/aggregate", { cohort_type: "sector", benchmark: "nifty", period: "3m" });
+  const router = useRouter();
+  const [benchmark, setBenchmark] = useState("nifty");
+  const [period, setPeriod] = useState("3m");
+
+  const { data: bubble, state, meta } = useUnifiedData<AggregateResponse>("/api/unified/aggregate", {
+    cohort_type: "sector",
+    benchmark,
+    period,
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -18,8 +38,48 @@ export default function SectorsPage() {
 
       {bubble && (
         <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", borderRadius: "8px", padding: "16px" }}>
-          <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>Sector Bubble</div>
-          <BubbleChart data={bubble.points} height={360} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "12px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 600 }}>Sector Bubble</div>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <select
+                value={benchmark}
+                onChange={(e) => setBenchmark(e.target.value)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-default)",
+                  background: "var(--bg-surface)",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {BENCHMARK_OPTIONS.map((b) => (
+                  <option key={b.value} value={b.value}>{b.label}</option>
+                ))}
+              </select>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border-default)",
+                  background: "var(--bg-surface)",
+                  fontSize: "13px",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {PERIOD_OPTIONS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <BubbleChart
+            data={bubble.points}
+            height={360}
+            onBubbleClick={(key) => router.push(`/unified/sectors/${encodeURIComponent(key)}`)}
+          />
         </div>
       )}
 

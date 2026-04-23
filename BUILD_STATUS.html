@@ -1,63 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<meta http-equiv="refresh" content="30">
-<title>ATLAS_KIM Build Status</title>
-<style>
-body{font-family:Inter,system-ui,sans-serif;background:#F7F8FA;color:#1A1F2C;max-width:900px;margin:40px auto;padding:0 20px}
-h1{font-size:24px;border-bottom:2px solid #134F5C;padding-bottom:10px}
-.card{background:#fff;border:1px solid #E3E6EB;border-radius:6px;padding:16px;margin:12px 0}
-.status-ok{color:#0B7A4E;font-weight:600}
-.status-wip{color:#9A6410;font-weight:600}
-.status-todo{color:#8A909C}
-.table{width:100%;border-collapse:collapse;font-size:13px}
-.table th{text-align:left;padding:8px;border-bottom:2px solid #E3E6EB}
-.table td{padding:8px;border-bottom:1px solid #EEF0F3}
-.timestamp{font-size:11px;color:#8A909C;margin-top:4px}
-</style>
+  <meta charset="utf-8">
+  <title>ATLAS Kim — Build Status</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #F7F8FA; color: #1a1a1a; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-weight: 400; font-size: 28px; margin-bottom: 8px; }
+    .subtitle { color: #666; font-size: 14px; margin-bottom: 32px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin: 0 0 12px 0; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .green { background: #22c55e; }
+    .amber { background: #f59e0b; }
+    .red { background: #ef4444; }
+    .blue { background: #3b82f6; }
+    .metric { font-size: 32px; font-weight: 700; color: #134F5C; margin: 8px 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    a { color: #134F5C; }
+    pre { font-size: 12px; background: #f4f4f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
+  </style>
 </head>
 <body>
-<h1>ATLAS_KIM — Live Build Status</h1>
-<div class="card">
-  <div><strong>Last Updated:</strong> <span id="ts">2026-04-23 10:00 UTC</span></div>
-  <div><strong>Builder:</strong> Kimi Code (EC2 autonomous)</div>
-  <div><strong>Git:</strong> <a href="https://github.com/nimishshah1989/atlas_kim">github.com/nimishshah1989/atlas_kim</a></div>
-  <div><strong>Workspace:</strong> /home/ubuntu/atlas_kim</div>
-</div>
+  <h1>ATLAS Kim <span style="font-weight:300">— Unified RS Intelligence Engine</span></h1>
+  <div class="subtitle">Build status &middot; Last updated: 2026-04-23</div>
 
-<h2>Phase Tracker</h2>
-<table class="table">
-<tr><th>Phase</th><th>Status</th><th>Details</th></tr>
-<tr><td>0. Data Cleanup</td><td class="status-ok">✓ DONE</td><td>Deduped corporate actions, fixed MF weights, created views</td></tr>
-<tr><td>1. Schema + Migration</td><td class="status-ok">✓ DONE</td><td>9 unified tables created in JIP RDS</td></tr>
-<tr><td>2. RS Engine</td><td class="status-wip">⏳ IN PROGRESS</td><td>Building unified_compute.py (using existing technicals, not recomputing)</td></tr>
-<tr><td>3. MF + Narratives</td><td class="status-todo">○ PENDING</td><td></td></tr>
-<tr><td>4. API Layer</td><td class="status-todo">○ PENDING</td><td>4 endpoints</td></tr>
-<tr><td>5. Frontend</td><td class="status-todo">○ PENDING</td><td>8 routes</td></tr>
-<tr><td>6. Integration</td><td class="status-todo">○ PENDING</td><td>Scheduler + validation</td></tr>
-</table>
+  <div class="grid">
+    <div class="card">
+      <h2>Backend API</h2>
+      <div class="status"><span class="dot green"></span> Running on port 8000</div>
+      <div class="metric">4</div>
+      <div style="font-size:12px;color:#666">Endpoints live (snapshot, aggregate, screen, regime)</div>
+    </div>
+    <div class="card">
+      <h2>Frontend</h2>
+      <div class="status"><span class="dot green"></span> Built &amp; running on port 3001</div>
+      <div class="metric">7</div>
+      <div style="font-size:12px;color:#666">Routes (dashboard, sectors, instrument, funds, leaders, weakening)</div>
+    </div>
+    <div class="card">
+      <h2>Database</h2>
+      <div class="status"><span class="dot green"></span> Populated</div>
+      <div class="metric">2,444</div>
+      <div style="font-size:12px;color:#666">Metrics rows for 2026-04-22</div>
+    </div>
+    <div class="card">
+      <h2>Pipeline</h2>
+      <div class="status"><span class="dot amber"></span> Backfill in progress</div>
+      <div class="metric">1 / 5</div>
+      <div style="font-size:12px;color:#666">Dates computed (Apr 16-22)</div>
+    </div>
+  </div>
 
-<h2>Data Gaps (Explicit List)</h2>
-<table class="table">
-<tr><th>Source</th><th>Issue</th><th>Impact</th><th>Action</th></tr>
-<tr><td>de_global_prices (^GSPC)</td><td>Only 5 rows</td><td>S&P 500 RS may be NULL</td><td>Pipeline skips if <30 days</td></tr>
-<tr><td>de_global_prices (URTH)</td><td>Only 5 rows</td><td>MSCI World RS may be NULL</td><td>Pipeline skips if <30 days</td></tr>
-<tr><td>de_global_prices (GC=F)</td><td>9 rows</td><td>Gold RS may be NULL</td><td>Pipeline skips if <30 days</td></tr>
-<tr><td>de_mf_master.benchmark</td><td>100% NULL (enriched best-effort)</td><td>MF benchmark mapping approximate</td><td>Best-effort mapping applied</td></tr>
-</table>
+  <div class="card">
+    <h2>Quick Links</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:14px;">
+      <a href="http://13.202.162.196:8000/docs">Backend API Docs (Swagger)</a>
+      <a href="http://13.202.162.196:8000/api/unified/regime">Regime Endpoint (JSON)</a>
+      <a href="http://13.202.162.196:3001/unified">Frontend Dashboard</a>
+    </div>
+  </div>
 
-<h2>Key Decisions</h2>
-<div class="card">
-<ul>
-<li><strong>Technicals:</strong> REUSING existing <code>de_equity_technical_daily</code> (RSI, MACD, EMAs). NOT recomputing.</li>
-<li><strong>Prices:</strong> Using <code>de_equity_ohlcv</code> + adjusted close view for returns.</li>
-<li><strong>Holdings:</strong> Weekly refresh (not monthly) since funds update at different times.</li>
-<li><strong>Multi-tenancy:</strong> <code>tenant_id</code> column on every table. No hardcoded tenants.</li>
-<li><strong>5 Benchmarks:</strong> Nifty 50, Nifty 500, S&P 500 (^GSPC), MSCI World (URTH), Gold (GC=F).</li>
-</ul>
-</div>
-
-<div class="timestamp">Auto-refreshes every 30s. Build continues even if you close your laptop (runs on EC2).</div>
+  <div class="card">
+    <h2>Git Repository</h2>
+    <pre>git@github.com:nimishshah1989/atlas_kim.git
+Branch: master
+Latest: feat(unified): RS compute engine, API layer, and Next.js frontend MVP</pre>
+  </div>
 </body>
 </html>

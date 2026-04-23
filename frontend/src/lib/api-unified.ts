@@ -240,9 +240,26 @@ export async function getAggregate(cohort: string, benchmark = "nifty", period =
   return apiFetch<AggregateResponse>("/api/unified/aggregate", { cohort_type: cohort, benchmark, period });
 }
 
+export async function postApi<T>(endpoint: string, body: unknown): Promise<T> {
+  const url = `${API_BASE}${endpoint}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new AtlasApiError(`HTTP_${res.status}`, `Server returned ${res.status}`);
+    return res.json() as Promise<T>;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function runScreen(body: ScreenerRequest) {
-  return apiFetch<ScreenerResponse>("/api/unified/screen", undefined);
-  // POST not supported by apiFetch params; use fetch directly in callers
+  return postApi<ScreenerResponse>("/api/unified/screen", body);
 }
 
 // ---------------------------------------------------------------------------

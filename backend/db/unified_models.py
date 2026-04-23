@@ -243,6 +243,7 @@ class UnifiedMarketRegime(Base):
 
     date: Mapped[date] = mapped_column(Date, primary_key=True)
     tenant_id: Mapped[str] = mapped_column(String(50), nullable=False, server_default="default", primary_key=True)
+    region: Mapped[str] = mapped_column(String(20), nullable=False, server_default="IN", primary_key=True)
 
     pct_above_ema_20: Mapped[float | None] = mapped_column(Double, nullable=True)
     pct_above_ema_50: Mapped[float | None] = mapped_column(Double, nullable=True)
@@ -303,6 +304,24 @@ class UnifiedMFLookthrough(Base):
     lt_action_confidence: Mapped[float | None] = mapped_column(Double, nullable=True)
     narrative: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
+    # Extended look-through fields
+    lookthrough_rs_3m: Mapped[float | None] = mapped_column(Double, nullable=True)
+    lookthrough_rs_12m: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pct_holdings_leader: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pct_holdings_emerging: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pct_holdings_broken: Mapped[float | None] = mapped_column(Double, nullable=True)
+    top_sector: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    sector_herfindahl: Mapped[float | None] = mapped_column(Double, nullable=True)
+    num_holdings: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    top10_concentration: Mapped[float | None] = mapped_column(Double, nullable=True)
+    avg_holding_ret_3m: Mapped[float | None] = mapped_column(Double, nullable=True)
+    avg_holding_frag_score: Mapped[float | None] = mapped_column(Double, nullable=True)
+    cap_large_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    cap_mid_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    cap_small_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    cap_tilt: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    dominant_sectors: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -321,19 +340,37 @@ class UnifiedMFHoldingsDetail(Base):
     tenant_id: Mapped[str] = mapped_column(String(50), nullable=False, server_default="default")
     mf_id: Mapped[str] = mapped_column(String(50), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
-    child_id: Mapped[str] = mapped_column(String(50), ForeignKey("unified_instruments.instrument_id"), nullable=False)
+    child_id: Mapped[str | None] = mapped_column(String(50), ForeignKey("unified_instruments.instrument_id"), nullable=True)
     child_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     weight_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
     child_rs_3m: Mapped[float | None] = mapped_column(Double, nullable=True)
     child_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
     child_action: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    isin: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    sector: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    industry: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    market_value: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+    shares_held: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    holding_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    source_raw: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        UniqueConstraint("tenant_id", "mf_id", "date", "child_id", name="uq_unified_mf_holdings_detail"),
         Index("idx_mf_holdings_mf_date", "tenant_id", "mf_id", "date"),
     )
+
+
+# ─── Unified MF Dominant Sectors ────────────────────────────────────────────
+
+class UnifiedMFDominantSectors(Base):
+    __tablename__ = "unified_mf_dominant_sectors"
+
+    tenant_id: Mapped[str] = mapped_column(String(50), nullable=False, server_default="default", primary_key=True)
+    mf_id: Mapped[str] = mapped_column(String(50), nullable=False, primary_key=True)
+    date: Mapped[date] = mapped_column(Date, nullable=False, primary_key=True)
+    sectors: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 # ─── Unified MF Rankings ────────────────────────────────────────────────────
@@ -352,6 +389,24 @@ class UnifiedMFRanking(Base):
     rank_in_category: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_in_category: Mapped[int | None] = mapped_column(Integer, nullable=True)
     action: Mapped[str | None] = mapped_column(String(30), nullable=True)
+
+    # 6-factor independent percentiles
+    factor_momentum_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    factor_quality_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    factor_resilience_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    factor_holdings_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    factor_cost_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    factor_consistency_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    lookthrough_rs_3m: Mapped[float | None] = mapped_column(Double, nullable=True)
+    lookthrough_rs_12m: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pct_holdings_leader: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pct_holdings_emerging: Mapped[float | None] = mapped_column(Double, nullable=True)
+    sector_herfindahl: Mapped[float | None] = mapped_column(Double, nullable=True)
+    top10_concentration: Mapped[float | None] = mapped_column(Double, nullable=True)
+    cap_tilt: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    aum_cr: Mapped[float | None] = mapped_column(Double, nullable=True)
+    expense_ratio: Mapped[float | None] = mapped_column(Double, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

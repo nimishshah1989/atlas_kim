@@ -21,6 +21,8 @@ class CohortType(str, Enum):
     INSTRUMENT_TYPE = "instrument_type"
     STATE = "state"
     ACTION = "action"
+    COUNTRY = "country"
+    GLOBAL_SECTOR = "global_sector"
 
 
 class Benchmark(str, Enum):
@@ -127,6 +129,36 @@ class MetricSnapshot(BaseModel):
     action_confidence: Optional[float] = None
 
 
+class LookthroughSummary(BaseModel):
+    lookthrough_rs_3m: Optional[float] = None
+    lookthrough_rs_12m: Optional[float] = None
+    pct_holdings_leader: Optional[float] = None
+    pct_holdings_emerging: Optional[float] = None
+    pct_holdings_broken: Optional[float] = None
+    top_sector: Optional[str] = None
+    sector_herfindahl: Optional[float] = None
+    num_holdings: Optional[int] = None
+    top10_concentration: Optional[float] = None
+    avg_holding_ret_3m: Optional[float] = None
+    avg_holding_frag_score: Optional[float] = None
+    cap_large_pct: Optional[float] = None
+    cap_mid_pct: Optional[float] = None
+    cap_small_pct: Optional[float] = None
+    cap_tilt: Optional[str] = None
+    dominant_sectors: Optional[list[dict[str, Any]]] = None
+
+
+class FactorPercentiles(BaseModel):
+    factor_momentum_pct: Optional[float] = None
+    factor_quality_pct: Optional[float] = None
+    factor_resilience_pct: Optional[float] = None
+    factor_holdings_pct: Optional[float] = None
+    factor_cost_pct: Optional[float] = None
+    factor_consistency_pct: Optional[float] = None
+    rank_in_category: Optional[int] = None
+    total_in_category: Optional[int] = None
+
+
 class NarrativeBlock(BaseModel):
     verdict: str
     reasons: list[str]
@@ -138,6 +170,8 @@ class NarrativeBlock(BaseModel):
 class SnapshotResponse(BaseModel):
     instrument: InstrumentIdentity
     metrics: MetricSnapshot
+    lookthrough: Optional[LookthroughSummary] = None
+    factor_percentiles: Optional[FactorPercentiles] = None
     narrative: Optional[NarrativeBlock] = None
     meta: ResponseMeta
 
@@ -241,4 +275,153 @@ class RegimeResponse(BaseModel):
     direction: Optional[str] = None
     metrics: RegimeMetrics
     narrative: Optional[NarrativeBlock] = None
+    meta: ResponseMeta
+
+
+# ---------------------------------------------------------------------------
+# Fund Rankings (6-factor heatmap)
+# ---------------------------------------------------------------------------
+
+
+class FundRankingRow(BaseModel):
+    instrument_id: str
+    symbol: str
+    name: str
+    instrument_type: str
+    mf_category: str
+    cap_tilt: Optional[str] = None
+    lookthrough_rs_3m: Optional[float] = None
+    aum_cr: Optional[float] = None
+    expense_ratio: Optional[float] = None
+    factor_momentum_pct: Optional[float] = None
+    factor_quality_pct: Optional[float] = None
+    factor_resilience_pct: Optional[float] = None
+    factor_holdings_pct: Optional[float] = None
+    factor_cost_pct: Optional[float] = None
+    factor_consistency_pct: Optional[float] = None
+    action: Optional[str] = None
+    rank_in_category: Optional[int] = None
+    total_in_category: Optional[int] = None
+
+
+class FundRankingsResponse(BaseModel):
+    rows: list[FundRankingRow]
+    meta: ResponseMeta
+
+
+# ---------------------------------------------------------------------------
+# Fund X-Ray
+# ---------------------------------------------------------------------------
+
+
+class HoldingRow(BaseModel):
+    child_id: Optional[str] = None
+    child_name: Optional[str] = None
+    weight_pct: Optional[float] = None
+    sector: Optional[str] = None
+    state: Optional[str] = None
+    action: Optional[str] = None
+    rs_nifty_3m_rank: Optional[float] = None
+    ret_3m: Optional[float] = None
+    frag_score: Optional[float] = None
+
+
+class FundXrayResponse(BaseModel):
+    instrument: InstrumentIdentity
+    lookthrough: LookthroughSummary
+    factor_percentiles: FactorPercentiles
+    holdings: list[HoldingRow]
+    meta: ResponseMeta
+
+
+# ---------------------------------------------------------------------------
+# Fund Holdings
+# ---------------------------------------------------------------------------
+
+
+class FundHoldingsResponse(BaseModel):
+    instrument: InstrumentIdentity
+    holdings: list[HoldingRow]
+    meta: ResponseMeta
+
+
+# ---------------------------------------------------------------------------
+# Fund Categories
+# ---------------------------------------------------------------------------
+
+
+class CategoryAggregate(BaseModel):
+    mf_category: str
+    fund_count: int
+    median_momentum_pct: Optional[float] = None
+    median_quality_pct: Optional[float] = None
+    median_resilience_pct: Optional[float] = None
+    median_holdings_pct: Optional[float] = None
+    median_cost_pct: Optional[float] = None
+    median_consistency_pct: Optional[float] = None
+    avg_aum_cr: Optional[float] = None
+
+
+class FundCategoriesResponse(BaseModel):
+    categories: list[CategoryAggregate]
+    meta: ResponseMeta
+
+
+# ---------------------------------------------------------------------------
+# Fund Screen
+# ---------------------------------------------------------------------------
+
+
+class FundScreenRequest(BaseModel):
+    filters: list[FilterClause] = Field(default_factory=list)
+    sort_field: Optional[str] = None
+    sort_direction: SortDirection = SortDirection.DESC
+    limit: int = Field(default=50, ge=1, le=500)
+    offset: int = Field(default=0, ge=0)
+
+
+class FundScreenRow(BaseModel):
+    instrument_id: str
+    symbol: str
+    name: str
+    mf_category: str
+    cap_tilt: Optional[str] = None
+    factor_momentum_pct: Optional[float] = None
+    factor_quality_pct: Optional[float] = None
+    factor_resilience_pct: Optional[float] = None
+    factor_holdings_pct: Optional[float] = None
+    factor_cost_pct: Optional[float] = None
+    factor_consistency_pct: Optional[float] = None
+    action: Optional[str] = None
+    aum_cr: Optional[float] = None
+    expense_ratio: Optional[float] = None
+
+
+class FundScreenResponse(BaseModel):
+    rows: list[FundScreenRow]
+    total_count: int
+    meta: ResponseMeta
+
+
+# ---------------------------------------------------------------------------
+# Global Aggregate
+# ---------------------------------------------------------------------------
+
+
+class GlobalAggregatePoint(BaseModel):
+    country: str
+    instrument_count: int
+    median_rs_sp500_3m: Optional[float] = None
+    median_rs_msci_3m: Optional[float] = None
+    median_ret_3m: Optional[float] = None
+    median_ret_12m: Optional[float] = None
+    pct_leader: Optional[float] = None
+    bubble_x: Optional[float] = None
+    bubble_y: Optional[float] = None
+    bubble_size: Optional[float] = None
+    bubble_color: Optional[str] = None
+
+
+class GlobalAggregateResponse(BaseModel):
+    points: list[GlobalAggregatePoint]
     meta: ResponseMeta

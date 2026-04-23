@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { type SWRConfiguration } from "swr";
-import { apiFetch, AtlasMeta, AtlasApiError } from "@/lib/api-unified";
+import { apiFetch, postApi, AtlasMeta, AtlasApiError } from "@/lib/api-unified";
 
 type DataState = "loading" | "ready" | "stale" | "empty" | "error";
 
@@ -50,6 +50,47 @@ export function useUnifiedData<T>(
     const raw = (await apiFetch<Record<string, unknown>>(ep, parsedParams)) as Record<string, unknown>;
     const meta = (raw.meta ?? { data_as_of: undefined, record_count: 0, tenant_id: "default" }) as AtlasMeta;
     // Strip meta from data payload
+    const { meta: _m, ...data } = raw;
+    return { data: data as unknown as T, meta };
+  };
+
+  const { data: swrData, error: swrError, isValidating, mutate } = useSWR<
+    { data: T; meta: AtlasMeta },
+    unknown
+  >(key, fetcher, options);
+
+  const state = computeState<T>(swrData, swrError, isValidating);
+
+  const error =
+    swrError instanceof AtlasApiError
+      ? swrError
+      : swrError instanceof Error
+      ? new AtlasApiError("UNKNOWN", swrError.message)
+      : swrError
+      ? new AtlasApiError("UNKNOWN", String(swrError))
+      : null;
+
+  return {
+    data: swrData?.data ?? null,
+    meta: swrData?.meta ?? null,
+    state,
+    error,
+    isLoading: state === "loading",
+    mutate: () => mutate(),
+  };
+}
+
+export function useUnifiedDataPost<T>(
+  endpoint: string | null,
+  body?: unknown,
+  options?: SWRConfiguration
+): UseUnifiedResult<T> {
+  const key = endpoint ? [endpoint, JSON.stringify(body ?? {})] : null;
+
+  const fetcher = async ([ep, b]: [string, string]) => {
+    const parsedBody = b ? JSON.parse(b) : undefined;
+    const raw = (await postApi<Record<string, unknown>>(ep, parsedBody)) as Record<string, unknown>;
+    const meta = (raw.meta ?? { data_as_of: undefined, record_count: 0, tenant_id: "default" }) as AtlasMeta;
     const { meta: _m, ...data } = raw;
     return { data: data as unknown as T, meta };
   };

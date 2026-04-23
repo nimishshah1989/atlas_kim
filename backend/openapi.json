@@ -12,7 +12,7 @@
           "unified"
         ],
         "summary": "Instrument evidence card",
-        "description": "Returns identity, latest metrics, and deterministic narrative for a single instrument.",
+        "description": "Returns identity, latest metrics, lookthrough, factor percentiles, and deterministic narrative.",
         "operationId": "get_snapshot_api_unified_snapshot__instrument_id__get",
         "parameters": [
           {
@@ -86,7 +86,7 @@
           "unified"
         ],
         "summary": "Cohort aggregate (bubble + table)",
-        "description": "Returns aggregated metrics grouped by cohort (sector, cap, state, etc.).",
+        "description": "Returns aggregated metrics grouped by cohort (sector, cap, state, mf_category, country, global_sector, etc.).",
         "operationId": "get_aggregate_api_unified_aggregate_get",
         "parameters": [
           {
@@ -139,6 +139,24 @@
               "title": "Date"
             },
             "description": "Optional snapshot date (defaults to latest)"
+          },
+          {
+            "name": "instrument_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by instrument type (e.g. EQUITY, MF, ETF, INDEX_GLOBAL)",
+              "title": "Instrument Type"
+            },
+            "description": "Filter by instrument type (e.g. EQUITY, MF, ETF, INDEX_GLOBAL)"
           },
           {
             "name": "tenant_id",
@@ -298,6 +316,470 @@
         }
       }
     },
+    "/api/unified/funds/rankings": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "MF 6-factor heatmap data",
+        "description": "Returns all funds with their 6 independent factor percentiles.",
+        "operationId": "get_funds_rankings_api_unified_funds_rankings_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundRankingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/funds/{instrument_id}/xray": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Full fund evidence + holdings + factors",
+        "description": "Returns lookthrough, factor percentiles, and top 20 holdings for a fund/ETF/index.",
+        "operationId": "get_fund_xray_endpoint_api_unified_funds__instrument_id__xray_get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundXrayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/funds/{instrument_id}/holdings": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Top 20 holdings with child metrics",
+        "description": "Returns the top 20 holdings for a fund with child-level metrics.",
+        "operationId": "get_fund_holdings_endpoint_api_unified_funds__instrument_id__holdings_get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundHoldingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/funds/categories": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Distinct categories with aggregates",
+        "description": "Returns all MF categories with median factor percentiles and fund counts.",
+        "operationId": "get_funds_categories_api_unified_funds_categories_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundCategoriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/funds/screen": {
+      "post": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Filter by factors, category, cap tilt",
+        "description": "Screen funds using 6-factor percentiles and category filters.",
+        "operationId": "post_fund_screen_api_unified_funds_screen_post",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundScreenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundScreenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/global/regime": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Global market regime",
+        "description": "Returns the latest global market regime with deterministic narrative.",
+        "operationId": "get_global_regime_api_unified_global_regime_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional regime date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional regime date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/global/aggregate": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Country/region bubble chart data",
+        "description": "Returns aggregated global metrics grouped by country for bubble chart.",
+        "operationId": "get_global_aggregate_endpoint_api_unified_global_aggregate_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional snapshot date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional snapshot date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalAggregateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -368,6 +850,101 @@
           "gold"
         ],
         "title": "Benchmark"
+      },
+      "CategoryAggregate": {
+        "properties": {
+          "mf_category": {
+            "type": "string",
+            "title": "Mf Category"
+          },
+          "fund_count": {
+            "type": "integer",
+            "title": "Fund Count"
+          },
+          "median_momentum_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Momentum Pct"
+          },
+          "median_quality_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Quality Pct"
+          },
+          "median_resilience_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Resilience Pct"
+          },
+          "median_holdings_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Holdings Pct"
+          },
+          "median_cost_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Cost Pct"
+          },
+          "median_consistency_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Consistency Pct"
+          },
+          "avg_aum_cr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Aum Cr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mf_category",
+          "fund_count"
+        ],
+        "title": "CategoryAggregate"
       },
       "CohortPoint": {
         "properties": {
@@ -538,9 +1115,105 @@
           "mf_category",
           "instrument_type",
           "state",
-          "action"
+          "action",
+          "country",
+          "global_sector"
         ],
         "title": "CohortType"
+      },
+      "FactorPercentiles": {
+        "properties": {
+          "factor_momentum_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Momentum Pct"
+          },
+          "factor_quality_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Quality Pct"
+          },
+          "factor_resilience_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Resilience Pct"
+          },
+          "factor_holdings_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Holdings Pct"
+          },
+          "factor_cost_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Cost Pct"
+          },
+          "factor_consistency_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Consistency Pct"
+          },
+          "rank_in_category": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank In Category"
+          },
+          "total_in_category": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total In Category"
+          }
+        },
+        "type": "object",
+        "title": "FactorPercentiles"
       },
       "FilterClause": {
         "properties": {
@@ -565,6 +1238,619 @@
         ],
         "title": "FilterClause"
       },
+      "FundCategoriesResponse": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryAggregate"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "categories",
+          "meta"
+        ],
+        "title": "FundCategoriesResponse"
+      },
+      "FundHoldingsResponse": {
+        "properties": {
+          "instrument": {
+            "$ref": "#/components/schemas/InstrumentIdentity"
+          },
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingRow"
+            },
+            "type": "array",
+            "title": "Holdings"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument",
+          "holdings",
+          "meta"
+        ],
+        "title": "FundHoldingsResponse"
+      },
+      "FundRankingRow": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "instrument_type": {
+            "type": "string",
+            "title": "Instrument Type"
+          },
+          "mf_category": {
+            "type": "string",
+            "title": "Mf Category"
+          },
+          "cap_tilt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Tilt"
+          },
+          "lookthrough_rs_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lookthrough Rs 3M"
+          },
+          "aum_cr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aum Cr"
+          },
+          "expense_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expense Ratio"
+          },
+          "factor_momentum_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Momentum Pct"
+          },
+          "factor_quality_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Quality Pct"
+          },
+          "factor_resilience_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Resilience Pct"
+          },
+          "factor_holdings_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Holdings Pct"
+          },
+          "factor_cost_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Cost Pct"
+          },
+          "factor_consistency_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Consistency Pct"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "rank_in_category": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank In Category"
+          },
+          "total_in_category": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total In Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "name",
+          "instrument_type",
+          "mf_category"
+        ],
+        "title": "FundRankingRow"
+      },
+      "FundRankingsResponse": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/FundRankingRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "meta"
+        ],
+        "title": "FundRankingsResponse"
+      },
+      "FundScreenRequest": {
+        "properties": {
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/FilterClause"
+            },
+            "type": "array",
+            "title": "Filters"
+          },
+          "sort_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Field"
+          },
+          "sort_direction": {
+            "$ref": "#/components/schemas/SortDirection",
+            "default": "desc"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "FundScreenRequest"
+      },
+      "FundScreenResponse": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/FundScreenRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "total_count",
+          "meta"
+        ],
+        "title": "FundScreenResponse"
+      },
+      "FundScreenRow": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "mf_category": {
+            "type": "string",
+            "title": "Mf Category"
+          },
+          "cap_tilt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Tilt"
+          },
+          "factor_momentum_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Momentum Pct"
+          },
+          "factor_quality_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Quality Pct"
+          },
+          "factor_resilience_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Resilience Pct"
+          },
+          "factor_holdings_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Holdings Pct"
+          },
+          "factor_cost_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Cost Pct"
+          },
+          "factor_consistency_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor Consistency Pct"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "aum_cr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aum Cr"
+          },
+          "expense_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expense Ratio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "name",
+          "mf_category"
+        ],
+        "title": "FundScreenRow"
+      },
+      "FundXrayResponse": {
+        "properties": {
+          "instrument": {
+            "$ref": "#/components/schemas/InstrumentIdentity"
+          },
+          "lookthrough": {
+            "$ref": "#/components/schemas/LookthroughSummary"
+          },
+          "factor_percentiles": {
+            "$ref": "#/components/schemas/FactorPercentiles"
+          },
+          "holdings": {
+            "items": {
+              "$ref": "#/components/schemas/HoldingRow"
+            },
+            "type": "array",
+            "title": "Holdings"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument",
+          "lookthrough",
+          "factor_percentiles",
+          "holdings",
+          "meta"
+        ],
+        "title": "FundXrayResponse"
+      },
+      "GlobalAggregatePoint": {
+        "properties": {
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "instrument_count": {
+            "type": "integer",
+            "title": "Instrument Count"
+          },
+          "median_rs_sp500_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Rs Sp500 3M"
+          },
+          "median_rs_msci_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Rs Msci 3M"
+          },
+          "median_ret_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Ret 3M"
+          },
+          "median_ret_12m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Ret 12M"
+          },
+          "pct_leader": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Leader"
+          },
+          "bubble_x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble X"
+          },
+          "bubble_y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble Y"
+          },
+          "bubble_size": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble Size"
+          },
+          "bubble_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble Color"
+          }
+        },
+        "type": "object",
+        "required": [
+          "country",
+          "instrument_count"
+        ],
+        "title": "GlobalAggregatePoint"
+      },
+      "GlobalAggregateResponse": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalAggregatePoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "points",
+          "meta"
+        ],
+        "title": "GlobalAggregateResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -577,6 +1863,111 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HoldingRow": {
+        "properties": {
+          "child_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Child Id"
+          },
+          "child_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Child Name"
+          },
+          "weight_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Pct"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "rs_nifty_3m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 3M Rank"
+          },
+          "ret_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 3M"
+          },
+          "frag_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frag Score"
+          }
+        },
+        "type": "object",
+        "title": "HoldingRow"
       },
       "InstrumentIdentity": {
         "properties": {
@@ -670,6 +2061,192 @@
           "instrument_type"
         ],
         "title": "InstrumentIdentity"
+      },
+      "LookthroughSummary": {
+        "properties": {
+          "lookthrough_rs_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lookthrough Rs 3M"
+          },
+          "lookthrough_rs_12m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lookthrough Rs 12M"
+          },
+          "pct_holdings_leader": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Holdings Leader"
+          },
+          "pct_holdings_emerging": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Holdings Emerging"
+          },
+          "pct_holdings_broken": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Holdings Broken"
+          },
+          "top_sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Sector"
+          },
+          "sector_herfindahl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector Herfindahl"
+          },
+          "num_holdings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Holdings"
+          },
+          "top10_concentration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top10 Concentration"
+          },
+          "avg_holding_ret_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Holding Ret 3M"
+          },
+          "avg_holding_frag_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Holding Frag Score"
+          },
+          "cap_large_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Large Pct"
+          },
+          "cap_mid_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Mid Pct"
+          },
+          "cap_small_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Small Pct"
+          },
+          "cap_tilt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Tilt"
+          },
+          "dominant_sectors": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dominant Sectors"
+          }
+        },
+        "type": "object",
+        "title": "LookthroughSummary"
       },
       "MetricSnapshot": {
         "properties": {
@@ -1517,6 +3094,26 @@
           },
           "metrics": {
             "$ref": "#/components/schemas/MetricSnapshot"
+          },
+          "lookthrough": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookthroughSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "factor_percentiles": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FactorPercentiles"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "narrative": {
             "anyOf": [

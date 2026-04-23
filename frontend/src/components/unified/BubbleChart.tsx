@@ -17,6 +17,7 @@ import type { CohortPoint } from "@/lib/api-unified";
 interface BubbleChartProps {
   data: CohortPoint[];
   height?: number;
+  onBubbleClick?: (cohortKey: string) => void;
 }
 
 const ACTION_COLORS: Record<string, string> = {
@@ -32,7 +33,7 @@ function colorForAction(action: string | null): string {
   return ACTION_COLORS[action ?? ""] ?? "var(--text-tertiary)";
 }
 
-export default function BubbleChart({ data, height = 400 }: BubbleChartProps) {
+export default function BubbleChart({ data, height = 400, onBubbleClick }: BubbleChartProps) {
   const normalized = useMemo(() => {
     const maxSize = Math.max(...data.map((d) => d.bubble_size ?? d.member_count), 1);
     return data.map((d) => ({
@@ -101,7 +102,7 @@ export default function BubbleChart({ data, height = 400 }: BubbleChartProps) {
           />
           <Scatter data={normalized}>
             {normalized.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.7} stroke={entry.color} strokeWidth={1} />
+              <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.7} stroke={entry.color} strokeWidth={1} onClick={() => onBubbleClick?.(entry.label)} />
             ))}
           </Scatter>
         </ScatterChart>

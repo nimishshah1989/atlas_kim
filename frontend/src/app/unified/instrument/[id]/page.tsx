@@ -29,10 +29,7 @@ export default function InstrumentPage() {
     { benchmark: "NIFTY_50", period: "3m", value: m.rs_nifty_3m_rank },
     { benchmark: "NIFTY_50", period: "6m", value: m.rs_nifty_6m_rank },
     { benchmark: "NIFTY_50", period: "12m", value: m.rs_nifty_12m_rank },
-    { benchmark: "NIFTY_500", period: "1w", value: m.rs_nifty500_3m_rank },
-    { benchmark: "NIFTY_500", period: "1m", value: m.rs_nifty500_3m_rank },
     { benchmark: "NIFTY_500", period: "3m", value: m.rs_nifty500_3m_rank },
-    { benchmark: "NIFTY_500", period: "6m", value: m.rs_nifty500_12m_rank },
     { benchmark: "NIFTY_500", period: "12m", value: m.rs_nifty500_12m_rank },
   ];
 
