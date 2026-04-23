@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? ""; // relative paths — nginx or next rewrite handles routing
 
 export interface AtlasMeta {
   data_as_of?: string;
