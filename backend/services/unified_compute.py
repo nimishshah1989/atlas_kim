@@ -226,69 +226,7 @@ async def sync_instruments(db: AsyncSession) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 2. Price union CTE
-# ---------------------------------------------------------------------------
-
-_PRICE_UNION_SQL = """
-    WITH price_union AS (
-        -- Equities (use close_adj if available, else close)
-        SELECT
-            i.instrument_id,
-            o.date,
-            COALESCE(o.close_adj, o.close)::numeric AS px
-        FROM de_equity_ohlcv o
-        JOIN unified_instruments i ON i.instrument_id = o.instrument_id::text
-        WHERE o.date BETWEEN :start_date AND :end_date
-
-        UNION ALL
-
-        -- ETFs
-        SELECT
-            em.ticker       AS instrument_id,
-            e.date,
-            e.close::numeric AS px
-        FROM de_etf_ohlcv e
-        JOIN unified_instruments ui ON ui.instrument_id = e.ticker
-        WHERE e.date BETWEEN :start_date AND :end_date
-
-        UNION ALL
-
-        -- MF NAV
-        SELECT
-            n.mstar_id      AS instrument_id,
-            n.nav_date      AS date,
-            COALESCE(n.nav_adj, n.nav)::numeric AS px
-        FROM de_mf_nav_daily n
-        JOIN unified_instruments ui ON ui.instrument_id = n.mstar_id
-        WHERE n.nav_date BETWEEN :start_date AND :end_date
-
-        UNION ALL
-
-        -- Global indices / commodities
-        SELECT
-            g.ticker        AS instrument_id,
-            g.date,
-            g.close::numeric AS px
-        FROM de_global_prices g
-        JOIN unified_instruments ui ON ui.instrument_id = g.ticker
-        WHERE g.date BETWEEN :start_date AND :end_date
-
-        UNION ALL
-
-        -- Indian indices
-        SELECT
-            ip.index_code   AS instrument_id,
-            ip.date,
-            ip.close::numeric AS px
-        FROM de_index_prices ip
-        JOIN unified_instruments ui ON ui.instrument_id = ip.index_code
-        WHERE ip.date BETWEEN :start_date AND :end_date
-    )
-"""
-
-
-# ---------------------------------------------------------------------------
-# 3. Returns + Technicals + RS Ranks (single-date batch)
+# 2. Returns + Technicals + RS Ranks (single-date batch)
 # ---------------------------------------------------------------------------
 
 async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
@@ -333,7 +271,7 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
 
     # Main compute SQL
     sql = f"""
-    WITH price_union AS (
+    WITH price_union_raw AS (
         SELECT i.instrument_id, o.date, COALESCE(o.close_adj, o.close)::numeric AS px
         FROM de_equity_ohlcv o
         JOIN unified_instruments i ON i.instrument_id = o.instrument_id::text
@@ -358,6 +296,11 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         FROM de_index_prices ip
         JOIN unified_instruments ui ON ui.instrument_id = ip.index_code
         WHERE ip.date BETWEEN :start_date AND :end_date
+    ),
+    price_union AS (
+        SELECT DISTINCT ON (instrument_id, date) instrument_id, date, px
+        FROM price_union_raw
+        ORDER BY instrument_id, date
     ),
     tech_union AS (
         SELECT instrument_id::text AS instrument_id, date,
@@ -536,7 +479,7 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
     """
 
     # Raise local statement timeout for heavy window-function query
-    await db.execute(text("SET LOCAL statement_timeout = '120000'"))
+    await db.execute(text("SET LOCAL statement_timeout = '300000'"))
     result = await db.execute(
         text(sql),
         {
