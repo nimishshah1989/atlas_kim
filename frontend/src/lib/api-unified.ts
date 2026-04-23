@@ -420,33 +420,6 @@ export async function getRegime() {
 // Funds Rankings & X-Ray
 // ---------------------------------------------------------------------------
 
-export interface FundXrayResponse {
-  instrument_id: string;
-  name: string;
-  category: string;
-  aum_cr: number | null;
-  expense_ratio: number | null;
-  benchmark_name: string | null;
-  factor_momentum_pct: number | null;
-  factor_quality_pct: number | null;
-  factor_resilience_pct: number | null;
-  factor_holdings_pct: number | null;
-  factor_cost_pct: number | null;
-  factor_consistency_pct: number | null;
-  lookthrough_rs_3m: number | null;
-  lookthrough_rs_12m: number | null;
-  pct_holdings_leader: number | null;
-  pct_holdings_emerging: number | null;
-  sector_herfindahl: number | null;
-  top10_concentration: number | null;
-  cap_tilt: string | null;
-  cap_large_pct: number | null;
-  cap_mid_pct: number | null;
-  cap_small_pct: number | null;
-  dominant_sectors: Record<string, number> | null;
-  action: string | null;
-}
-
 export interface FundHolding {
   child_id: string;
   name: string;

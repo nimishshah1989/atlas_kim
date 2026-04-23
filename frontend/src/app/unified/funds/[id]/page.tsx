@@ -52,18 +52,31 @@ export default function FundXrayPage() {
     );
   }
 
+  const inst = xray.instrument;
+  const lt = xray.lookthrough;
+  const fp = xray.factor_percentiles;
+  const action = snapshot?.metrics?.action ?? "HOLD";
+
   const radarData = [
-    { factor: "Momentum", fund: xray.factor_momentum_pct ?? 0, median: null },
-    { factor: "Quality", fund: xray.factor_quality_pct ?? 0, median: null },
-    { factor: "Resilience", fund: xray.factor_resilience_pct ?? 0, median: null },
-    { factor: "Holdings", fund: xray.factor_holdings_pct ?? 0, median: null },
-    { factor: "Cost", fund: xray.factor_cost_pct ?? 0, median: null },
-    { factor: "Consistency", fund: xray.factor_consistency_pct ?? 0, median: null },
+    { factor: "Momentum", fund: fp.factor_momentum_pct ?? 0, median: null },
+    { factor: "Quality", fund: fp.factor_quality_pct ?? 0, median: null },
+    { factor: "Resilience", fund: fp.factor_resilience_pct ?? 0, median: null },
+    { factor: "Holdings", fund: fp.factor_holdings_pct ?? 0, median: null },
+    { factor: "Cost", fund: fp.factor_cost_pct ?? 0, median: null },
+    { factor: "Consistency", fund: fp.factor_consistency_pct ?? 0, median: null },
   ];
 
-  const topSector = xray.dominant_sectors
-    ? Object.entries(xray.dominant_sectors).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—"
+  const topSector = lt?.dominant_sectors && lt.dominant_sectors.length > 0
+    ? lt.dominant_sectors.sort((a, b) => (b.weight_pct ?? 0) - (a.weight_pct ?? 0))[0]?.sector ?? "—"
     : "—";
+
+  // Build sector map for donut: { [sector]: weight_pct }
+  const sectorMap: Record<string, number> = {};
+  lt?.dominant_sectors?.forEach((s) => {
+    if (s.sector && s.weight_pct !== null) {
+      sectorMap[s.sector] = s.weight_pct;
+    }
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -94,17 +107,16 @@ export default function FundXrayPage() {
       >
         <div>
           <h1 style={{ fontFamily: "var(--font-serif)", fontSize: "26px", fontWeight: 400, margin: 0 }}>
-            {xray.name}
+            {inst.name}
           </h1>
           <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
-            {xray.category}
-            {xray.benchmark_name && <span style={{ marginLeft: "8px" }}>· Benchmark: {xray.benchmark_name}</span>}
-            <span style={{ marginLeft: "8px" }}>· AUM: {formatAum(xray.aum_cr)}</span>
-            <span style={{ marginLeft: "8px" }}>· Expense: {formatPct(xray.expense_ratio)}</span>
+            {inst.mf_category}
+            <span style={{ marginLeft: "8px" }}>· AUM: {formatAum(null)}</span>
+            <span style={{ marginLeft: "8px" }}>· Expense: {formatPct(null)}</span>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <ActionBadge action={xray.action ?? "HOLD"} size="lg" />
+          <ActionBadge action={action} size="lg" />
           <DataFreshness dataAsOf={xrayMeta?.data_as_of ?? null} />
         </div>
       </div>
@@ -155,14 +167,14 @@ export default function FundXrayPage() {
             overflow: "hidden",
           }}
         >
-          <MetricBox label="Lookthrough RS 3M" value={xray.lookthrough_rs_3m?.toFixed(1) ?? null} />
-          <MetricBox label="Lookthrough RS 12M" value={xray.lookthrough_rs_12m?.toFixed(1) ?? null} />
-          <MetricBox label="Leaders %" value={xray.pct_holdings_leader !== null ? `${xray.pct_holdings_leader.toFixed(1)}%` : null} />
-          <MetricBox label="Emerging %" value={xray.pct_holdings_emerging !== null ? `${xray.pct_holdings_emerging.toFixed(1)}%` : null} />
+          <MetricBox label="Lookthrough RS 3M" value={lt?.lookthrough_rs_3m?.toFixed(1) ?? null} />
+          <MetricBox label="Lookthrough RS 12M" value={lt?.lookthrough_rs_12m?.toFixed(1) ?? null} />
+          <MetricBox label="Leaders %" value={lt?.pct_holdings_leader !== null ? `${lt.pct_holdings_leader.toFixed(1)}%` : null} />
+          <MetricBox label="Emerging %" value={lt?.pct_holdings_emerging !== null ? `${lt.pct_holdings_emerging.toFixed(1)}%` : null} />
           <MetricBox label="Top Sector" value={topSector} />
-          <MetricBox label="Top 10 Conc." value={xray.top10_concentration !== null ? `${xray.top10_concentration.toFixed(1)}%` : null} />
-          <MetricBox label="Sector HHI" value={xray.sector_herfindahl?.toFixed(2) ?? null} />
-          <MetricBox label="Expense Ratio" value={xray.expense_ratio !== null ? `${xray.expense_ratio.toFixed(2)}%` : null} />
+          <MetricBox label="Top 10 Conc." value={lt?.top10_concentration !== null ? `${lt.top10_concentration.toFixed(1)}%` : null} />
+          <MetricBox label="Sector HHI" value={lt?.sector_herfindahl?.toFixed(2) ?? null} />
+          <MetricBox label="Expense Ratio" value={formatPct(null)} />
         </div>
       </div>
 
@@ -179,10 +191,10 @@ export default function FundXrayPage() {
           Market Cap Allocation
         </div>
         <CapTiltBar
-          largePct={xray.cap_large_pct}
-          midPct={xray.cap_mid_pct}
-          smallPct={xray.cap_small_pct}
-          capTilt={xray.cap_tilt}
+          largePct={lt?.cap_large_pct ?? null}
+          midPct={lt?.cap_mid_pct ?? null}
+          smallPct={lt?.cap_small_pct ?? null}
+          capTilt={lt?.cap_tilt ?? null}
         />
       </div>
 
@@ -198,7 +210,7 @@ export default function FundXrayPage() {
         <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "12px" }}>
           Sector Allocation
         </div>
-        <SectorDonut sectors={xray.dominant_sectors} height={280} />
+        <SectorDonut sectors={sectorMap} height={280} />
       </div>
 
       {/* Holdings Table */}
