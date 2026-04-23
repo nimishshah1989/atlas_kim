@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: "Funds", href: "/unified/funds" },
   { label: "Leaders", href: "/unified/leaders" },
   { label: "Weakening", href: "/unified/weakening" },
+  { label: "Global", href: "/unified/global" },
 ];
 
 function isActive(pathname: string, href: string): boolean {

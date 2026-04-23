@@ -128,9 +128,53 @@ export interface NarrativeBlock {
   recommended_action: string;
 }
 
+export interface LookthroughSummary {
+  lookthrough_rs_3m: number | null;
+  lookthrough_rs_12m: number | null;
+  pct_holdings_leader: number | null;
+  pct_holdings_emerging: number | null;
+  pct_holdings_broken: number | null;
+  top_sector: string | null;
+  sector_herfindahl: number | null;
+  num_holdings: number | null;
+  top10_concentration: number | null;
+  avg_holding_ret_3m: number | null;
+  avg_holding_frag_score: number | null;
+  cap_large_pct: number | null;
+  cap_mid_pct: number | null;
+  cap_small_pct: number | null;
+  cap_tilt: string | null;
+  dominant_sectors: { sector: string; weight_pct: number }[] | null;
+}
+
+export interface FactorPercentiles {
+  factor_momentum_pct: number | null;
+  factor_quality_pct: number | null;
+  factor_resilience_pct: number | null;
+  factor_holdings_pct: number | null;
+  factor_cost_pct: number | null;
+  factor_consistency_pct: number | null;
+  rank_in_category: number | null;
+  total_in_category: number | null;
+}
+
+export interface HoldingRow {
+  child_id: string | null;
+  child_name: string | null;
+  weight_pct: number | null;
+  sector: string | null;
+  state: string | null;
+  action: string | null;
+  rs_nifty_3m_rank: number | null;
+  ret_3m: number | null;
+  frag_score: number | null;
+}
+
 export interface SnapshotResponse {
   instrument: InstrumentIdentity;
   metrics: MetricSnapshot;
+  lookthrough: LookthroughSummary | null;
+  factor_percentiles: FactorPercentiles | null;
   narrative: NarrativeBlock | null;
   meta: AtlasMeta;
 }
@@ -330,10 +374,143 @@ export async function getSectors() {
   return apiFetch<SectorAggregate[]>("/api/unified/sectors");
 }
 
+export interface FundRankingRow {
+  instrument_id: string;
+  symbol: string;
+  name: string;
+  instrument_type: string;
+  mf_category: string;
+  cap_tilt: string | null;
+  lookthrough_rs_3m: number | null;
+  aum_cr: number | null;
+  expense_ratio: number | null;
+  factor_momentum_pct: number | null;
+  factor_quality_pct: number | null;
+  factor_resilience_pct: number | null;
+  factor_holdings_pct: number | null;
+  factor_cost_pct: number | null;
+  factor_consistency_pct: number | null;
+  action: string | null;
+  rank_in_category: number | null;
+  total_in_category: number | null;
+}
+
+export interface FundRankingsResponse {
+  rows: FundRankingRow[];
+  meta: AtlasMeta;
+}
+
+export interface FundXrayResponse {
+  instrument: InstrumentIdentity;
+  lookthrough: LookthroughSummary;
+  factor_percentiles: FactorPercentiles;
+  holdings: HoldingRow[];
+  meta: AtlasMeta;
+}
+
 export async function getSectorDetail(sectorName: string) {
   return apiFetch<SectorDetail>(`/api/unified/sectors/${encodeURIComponent(sectorName)}`);
 }
 
 export async function getRegime() {
   return apiFetch<RegimeResponse>("/api/unified/regime");
+}
+
+// ---------------------------------------------------------------------------
+// Funds Rankings & X-Ray
+// ---------------------------------------------------------------------------
+
+export interface FundRanking {
+  instrument_id: string;
+  symbol: string;
+  name: string;
+  instrument_type: string;
+  mf_category: string;
+  cap_tilt: string | null;
+  aum_cr: number | null;
+  expense_ratio: number | null;
+  factor_momentum_pct: number | null;
+  factor_quality_pct: number | null;
+  factor_resilience_pct: number | null;
+  factor_holdings_pct: number | null;
+  factor_cost_pct: number | null;
+  factor_consistency_pct: number | null;
+  lookthrough_rs_3m: number | null;
+  action: string | null;
+  rank_in_category: number | null;
+  total_in_category: number | null;
+}
+
+export interface FundRankingsResponse {
+  funds: FundRanking[];
+}
+
+export interface FundXrayResponse {
+  instrument_id: string;
+  name: string;
+  category: string;
+  aum_cr: number | null;
+  expense_ratio: number | null;
+  benchmark_name: string | null;
+  factor_momentum_pct: number | null;
+  factor_quality_pct: number | null;
+  factor_resilience_pct: number | null;
+  factor_holdings_pct: number | null;
+  factor_cost_pct: number | null;
+  factor_consistency_pct: number | null;
+  lookthrough_rs_3m: number | null;
+  lookthrough_rs_12m: number | null;
+  pct_holdings_leader: number | null;
+  pct_holdings_emerging: number | null;
+  sector_herfindahl: number | null;
+  top10_concentration: number | null;
+  cap_tilt: string | null;
+  cap_large_pct: number | null;
+  cap_mid_pct: number | null;
+  cap_small_pct: number | null;
+  dominant_sectors: Record<string, number> | null;
+  action: string | null;
+}
+
+export interface FundHolding {
+  child_id: string;
+  name: string;
+  weight_pct: number | null;
+  rs_nifty_3m_rank: number | null;
+  state: string | null;
+  sector: string | null;
+  action: string | null;
+}
+
+export interface FundHoldingsResponse {
+  holdings: FundHolding[];
+}
+
+export interface FundCategory {
+  category: string;
+  count: number;
+  avg_momentum: number | null;
+  avg_quality: number | null;
+}
+
+export interface FundCategoriesResponse {
+  categories: FundCategory[];
+}
+
+export interface GlobalAggregatePoint {
+  country: string;
+  instrument_count: number;
+  median_rs_sp500_3m: number | null;
+  median_rs_msci_3m: number | null;
+  median_ret_3m: number | null;
+  median_ret_12m: number | null;
+  pct_leader: number | null;
+  bubble_x: number | null;
+  bubble_y: number | null;
+  bubble_size: number | null;
+  bubble_color: string | null;
+}
+
+export interface GlobalAggregateResponse {
+  points: GlobalAggregatePoint[];
 }

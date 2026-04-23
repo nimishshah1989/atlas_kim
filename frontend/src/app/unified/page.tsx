@@ -9,8 +9,9 @@ import NarrativePanel from "@/components/unified/NarrativePanel";
 import BubbleChart from "@/components/unified/BubbleChart";
 import DataFreshness from "@/components/unified/DataFreshness";
 import EvidenceCard from "@/components/unified/EvidenceCard";
+import ActionBadge from "@/components/unified/ActionBadge";
 import Link from "next/link";
-import type { RegimeResponse, AggregateResponse, ScreenerResponse, ScreenerRow, MetricSnapshot } from "@/lib/api-unified";
+import type { RegimeResponse, AggregateResponse, ScreenerResponse, ScreenerRow, MetricSnapshot, FundRankingsResponse } from "@/lib/api-unified";
 
 const BENCHMARK_OPTIONS = [
   { value: "nifty", label: "Nifty 50" },
@@ -76,6 +77,8 @@ export default function UnifiedDashboard() {
     limit: 8,
     offset: 0,
   });
+
+  const { data: fundRankings, state: fundRankingsState } = useUnifiedData<FundRankingsResponse>("/api/unified/funds/rankings");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -203,6 +206,52 @@ export default function UnifiedDashboard() {
         </div>
       )}
 
+      {(aggState === "ready" || aggState === "stale") && aggregate && aggregate.points.length > 0 && (
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "12px" }}>
+            Sector Health
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {aggregate.points
+              .slice()
+              .sort((a, b) => (b.median_rs_rank ?? 0) - (a.median_rs_rank ?? 0))
+              .map((pt) => {
+                const score = pt.median_rs_rank ?? 0;
+                const pct = Math.min(100, Math.max(0, score));
+                let color = "var(--rag-red-500)";
+                let zone = "WEAK";
+                if (score > 70) { color = "var(--rag-green-500)"; zone = "HEALTHY"; }
+                else if (score > 55) { color = "var(--rag-green-400)"; zone = "HEALTHY"; }
+                else if (score > 40) { color = "var(--text-tertiary)"; zone = "NEUTRAL"; }
+                else if (score > 25) { color = "var(--rag-amber-500)"; zone = "CAUTION"; }
+                return (
+                  <div key={pt.cohort_key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "100px", fontSize: "12px", fontWeight: 500, color: "var(--text-primary)", flexShrink: 0 }}>
+                      {pt.cohort_key}
+                    </div>
+                    <div style={{ flex: 1, height: "8px", background: "var(--bg-inset)", borderRadius: "4px", overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: "4px", transition: "width 500ms ease" }} />
+                    </div>
+                    <div style={{ width: "40px", fontSize: "12px", fontVariantNumeric: "tabular-nums", textAlign: "right", color: "var(--text-secondary)" }}>
+                      {pct.toFixed(0)}%
+                    </div>
+                    <div style={{ width: "70px", fontSize: "10px", fontWeight: 700, color, textTransform: "uppercase", letterSpacing: "0.04em", textAlign: "right" }}>
+                      {zone}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
       {aggregate && aggregate.points.length > 0 && (
         <div
           style={{
@@ -275,6 +324,63 @@ export default function UnifiedDashboard() {
           </div>
         </div>
       )}
+
+      {(fundRankingsState === "ready" || fundRankingsState === "stale") && fundRankings && fundRankings.rows.length > 0 && (
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "12px" }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+              Top Funds (by Look-through RS)
+            </div>
+            <Link href="/unified/funds" style={{ fontSize: "12px", color: "var(--accent-700)", textDecoration: "none", fontWeight: 500 }}>
+              View all →
+            </Link>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+              <thead>
+                <tr style={{ background: "var(--bg-surface-alt)" }}>
+                  <th style={{ textAlign: "left", padding: "8px 10px", color: "var(--text-tertiary)", fontWeight: 600 }}>#</th>
+                  <th style={{ textAlign: "left", padding: "8px 10px", color: "var(--text-tertiary)", fontWeight: 600 }}>Fund</th>
+                  <th style={{ textAlign: "right", padding: "8px 10px", color: "var(--text-tertiary)", fontWeight: 600 }}>LT</th>
+                  <th style={{ textAlign: "left", padding: "8px 10px", color: "var(--text-tertiary)", fontWeight: 600 }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fundRankings.rows
+                  .slice()
+                  .sort((a, b) => (b.lookthrough_rs_3m ?? 0) - (a.lookthrough_rs_3m ?? 0))
+                  .slice(0, 5)
+                  .map((f, i) => (
+                    <tr key={f.instrument_id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "8px 10px", fontVariantNumeric: "tabular-nums" }}>{i + 1}</td>
+                      <td style={{ padding: "8px 10px", fontWeight: 500 }}>{f.name}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                        {f.lookthrough_rs_3m?.toFixed(0) ?? "—"}
+                      </td>
+                      <td style={{ padding: "8px 10px" }}>
+                        <ActionBadge action={f.action ?? "HOLD"} size="sm" />
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {fundRankingsState === "loading" && (
+        <div style={{ padding: "24px", textAlign: "center", color: "var(--text-tertiary)", fontSize: "13px" }}>
+          Loading fund rankings…
+        </div>
+      )}
+
     </div>
   );
 }
