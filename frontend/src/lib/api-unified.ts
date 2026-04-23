@@ -420,31 +420,6 @@ export async function getRegime() {
 // Funds Rankings & X-Ray
 // ---------------------------------------------------------------------------
 
-export interface FundRanking {
-  instrument_id: string;
-  symbol: string;
-  name: string;
-  instrument_type: string;
-  mf_category: string;
-  cap_tilt: string | null;
-  aum_cr: number | null;
-  expense_ratio: number | null;
-  factor_momentum_pct: number | null;
-  factor_quality_pct: number | null;
-  factor_resilience_pct: number | null;
-  factor_holdings_pct: number | null;
-  factor_cost_pct: number | null;
-  factor_consistency_pct: number | null;
-  lookthrough_rs_3m: number | null;
-  action: string | null;
-  rank_in_category: number | null;
-  total_in_category: number | null;
-}
-
-export interface FundRankingsResponse {
-  funds: FundRanking[];
-}
-
 export interface FundXrayResponse {
   instrument_id: string;
   name: string;

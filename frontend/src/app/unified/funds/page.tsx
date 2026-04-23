@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import FactorHeatmapCell from "@/components/unified/FactorHeatmapCell";
 import ActionBadge from "@/components/unified/ActionBadge";
 import DataFreshness from "@/components/unified/DataFreshness";
-import type { FundRanking, FundRankingsResponse, FundCategoriesResponse } from "@/lib/api-unified";
+import type { FundRankingRow, FundRankingsResponse, FundCategoriesResponse } from "@/lib/api-unified";
 
 type SortKey =
   | "name"
@@ -49,7 +49,7 @@ export default function FundsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("factor_momentum_pct");
   const [sortAsc, setSortAsc] = useState<boolean>(false);
 
-  const funds = rankingsData?.funds ?? [];
+  const funds = rankingsData?.rows ?? [];
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
