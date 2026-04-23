@@ -1,0 +1,1593 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ATLAS Kim \u2014 Unified RS Intelligence Engine",
+    "description": "Deterministic relative-strength intelligence layer for equities, MFs, ETFs and global indices.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/unified/snapshot/{instrument_id}": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Instrument evidence card",
+        "description": "Returns identity, latest metrics, and deterministic narrative for a single instrument.",
+        "operationId": "get_snapshot_api_unified_snapshot__instrument_id__get",
+        "parameters": [
+          {
+            "name": "instrument_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Instrument Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional snapshot date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional snapshot date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/aggregate": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Cohort aggregate (bubble + table)",
+        "description": "Returns aggregated metrics grouped by cohort (sector, cap, state, etc.).",
+        "operationId": "get_aggregate_api_unified_aggregate_get",
+        "parameters": [
+          {
+            "name": "cohort_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/CohortType",
+              "description": "Dimension to group by"
+            },
+            "description": "Dimension to group by"
+          },
+          {
+            "name": "benchmark",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Benchmark",
+              "description": "Benchmark for RS calculation",
+              "default": "nifty"
+            },
+            "description": "Benchmark for RS calculation"
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Period",
+              "description": "Return period for median",
+              "default": "3m"
+            },
+            "description": "Return period for median"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional snapshot date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional snapshot date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AggregateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/screen": {
+      "post": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Filterable screener",
+        "description": "Apply metric filters and return paginated rows.",
+        "operationId": "post_screen_api_unified_screen_post",
+        "parameters": [
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenerResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/unified/regime": {
+      "get": {
+        "tags": [
+          "unified"
+        ],
+        "summary": "Current market regime",
+        "description": "Returns the latest unified market regime with deterministic narrative.",
+        "operationId": "get_regime_api_unified_regime_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional regime date (defaults to latest)",
+              "title": "Date"
+            },
+            "description": "Optional regime date (defaults to latest)"
+          },
+          {
+            "name": "tenant_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Tenant identifier",
+              "default": "default",
+              "title": "Tenant Id"
+            },
+            "description": "Tenant identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegimeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AggregateResponse": {
+        "properties": {
+          "cohort_type": {
+            "$ref": "#/components/schemas/CohortType"
+          },
+          "benchmark": {
+            "$ref": "#/components/schemas/Benchmark"
+          },
+          "period": {
+            "$ref": "#/components/schemas/Period"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/CohortPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cohort_type",
+          "benchmark",
+          "period",
+          "points",
+          "meta"
+        ],
+        "title": "AggregateResponse"
+      },
+      "Benchmark": {
+        "type": "string",
+        "enum": [
+          "nifty",
+          "nifty500",
+          "sp500",
+          "msci",
+          "gold"
+        ],
+        "title": "Benchmark"
+      },
+      "CohortPoint": {
+        "properties": {
+          "cohort_key": {
+            "type": "string",
+            "title": "Cohort Key"
+          },
+          "cohort_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohort Label"
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count"
+          },
+          "median_rs_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Rs Rank"
+          },
+          "median_ret_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Ret 3M"
+          },
+          "median_ret_12m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Ret 12M"
+          },
+          "pct_above_ema_50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Above Ema 50"
+          },
+          "pct_leader_state": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Leader State"
+          },
+          "avg_frag_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Frag Score"
+          },
+          "consensus_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consensus Action"
+          },
+          "action_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Confidence"
+          },
+          "bubble_x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble X"
+          },
+          "bubble_y": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble Y"
+          },
+          "bubble_size": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble Size"
+          },
+          "bubble_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bubble Color"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cohort_key",
+          "member_count"
+        ],
+        "title": "CohortPoint"
+      },
+      "CohortType": {
+        "type": "string",
+        "enum": [
+          "sector",
+          "cap_category",
+          "mf_category",
+          "instrument_type",
+          "state",
+          "action"
+        ],
+        "title": "CohortType"
+      },
+      "FilterClause": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "op": {
+            "type": "string",
+            "pattern": "^(eq|ne|gt|gte|lt|lte|in|not_in|between|contains)$",
+            "title": "Op",
+            "default": "gte"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "value"
+        ],
+        "title": "FilterClause"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InstrumentIdentity": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "instrument_type": {
+            "type": "string",
+            "title": "Instrument Type"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "industry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Industry"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country",
+            "default": "IN"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "cap_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Category"
+          },
+          "mf_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mf Category"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "name",
+          "instrument_type"
+        ],
+        "title": "InstrumentIdentity"
+      },
+      "MetricSnapshot": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "ret_1d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 1D"
+          },
+          "ret_1w": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 1W"
+          },
+          "ret_1m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 1M"
+          },
+          "ret_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 3M"
+          },
+          "ret_6m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 6M"
+          },
+          "ret_12m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 12M"
+          },
+          "ema_20": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ema 20"
+          },
+          "ema_50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ema 50"
+          },
+          "ema_200": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ema 200"
+          },
+          "above_ema_20": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Above Ema 20"
+          },
+          "above_ema_50": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Above Ema 50"
+          },
+          "golden_cross": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Golden Cross"
+          },
+          "rvol_20d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rvol 20D"
+          },
+          "vol_trend": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vol Trend"
+          },
+          "vol_21d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vol 21D"
+          },
+          "max_dd_252d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Dd 252D"
+          },
+          "current_dd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Dd"
+          },
+          "rsi_14": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rsi 14"
+          },
+          "macd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Macd"
+          },
+          "macd_signal": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Macd Signal"
+          },
+          "pct_from_52w_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct From 52W High"
+          },
+          "rs_nifty_3m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 3M Rank"
+          },
+          "rs_nifty_12m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 12M Rank"
+          },
+          "rs_nifty_persistence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty Persistence"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "state_stability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Stability"
+          },
+          "frag_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frag Score"
+          },
+          "frag_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frag Level"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "action_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date"
+        ],
+        "title": "MetricSnapshot"
+      },
+      "NarrativeBlock": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "risks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Risks"
+          },
+          "technical_snapshot": {
+            "type": "string",
+            "title": "Technical Snapshot"
+          },
+          "recommended_action": {
+            "type": "string",
+            "title": "Recommended Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict",
+          "reasons",
+          "risks",
+          "technical_snapshot",
+          "recommended_action"
+        ],
+        "title": "NarrativeBlock"
+      },
+      "Period": {
+        "type": "string",
+        "enum": [
+          "1d",
+          "1w",
+          "1m",
+          "3m",
+          "6m",
+          "12m",
+          "24m",
+          "36m"
+        ],
+        "title": "Period"
+      },
+      "RegimeMetrics": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "pct_above_ema_20": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Above Ema 20"
+          },
+          "pct_above_ema_50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Above Ema 50"
+          },
+          "pct_above_ema_200": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Above Ema 200"
+          },
+          "pct_golden_cross": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Golden Cross"
+          },
+          "participation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participation"
+          },
+          "rs_dispersion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Dispersion"
+          },
+          "health_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Score"
+          },
+          "health_zone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Zone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date"
+        ],
+        "title": "RegimeMetrics"
+      },
+      "RegimeResponse": {
+        "properties": {
+          "regime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regime"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/RegimeMetrics"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NarrativeBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metrics",
+          "meta"
+        ],
+        "title": "RegimeResponse"
+      },
+      "ResponseMeta": {
+        "properties": {
+          "data_as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data As Of"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count",
+            "default": 0
+          },
+          "query_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Ms"
+          },
+          "cache_hit": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache Hit"
+          },
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "ResponseMeta"
+      },
+      "ScreenerRequest": {
+        "properties": {
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/FilterClause"
+            },
+            "type": "array",
+            "title": "Filters"
+          },
+          "sort_field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Field"
+          },
+          "sort_direction": {
+            "$ref": "#/components/schemas/SortDirection",
+            "default": "desc"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset",
+            "default": 0
+          },
+          "include_narrative": {
+            "type": "boolean",
+            "title": "Include Narrative",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ScreenerRequest"
+      },
+      "ScreenerResponse": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ScreenerRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "total_count",
+          "meta"
+        ],
+        "title": "ScreenerResponse"
+      },
+      "ScreenerRow": {
+        "properties": {
+          "instrument_id": {
+            "type": "string",
+            "title": "Instrument Id"
+          },
+          "symbol": {
+            "type": "string",
+            "title": "Symbol"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "instrument_type": {
+            "type": "string",
+            "title": "Instrument Type"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector"
+          },
+          "cap_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cap Category"
+          },
+          "mf_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mf Category"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "action_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Confidence"
+          },
+          "rs_nifty_3m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 3M Rank"
+          },
+          "rs_nifty_12m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 12M Rank"
+          },
+          "ret_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 3M"
+          },
+          "ret_12m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 12M"
+          },
+          "rsi_14": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rsi 14"
+          },
+          "frag_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frag Score"
+          },
+          "above_ema_50": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Above Ema 50"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument_id",
+          "symbol",
+          "name",
+          "instrument_type"
+        ],
+        "title": "ScreenerRow"
+      },
+      "SnapshotResponse": {
+        "properties": {
+          "instrument": {
+            "$ref": "#/components/schemas/InstrumentIdentity"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/MetricSnapshot"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NarrativeBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "instrument",
+          "metrics",
+          "meta"
+        ],
+        "title": "SnapshotResponse"
+      },
+      "SortDirection": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ],
+        "title": "SortDirection"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

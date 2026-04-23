@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  --bg-app:           #F7F8FA;
+  --bg-surface:       #FFFFFF;
+  --bg-surface-alt:   #FBFBFC;
+  --bg-inset:         #F2F4F7;
+  --bg-hover:         #F4F6F8;
+  --bg-selected:      #E6EFF1;
+
+  --border-subtle:    #EEF0F3;
+  --border-default:   #E3E6EB;
+  --border-strong:    #CDD2DA;
+  --border-focus:     #134F5C;
+
+  --text-primary:     #1A1F2C;
+  --text-secondary:   #565E6E;
+  --text-tertiary:    #8A909C;
+  --text-disabled:    #B4B9C2;
+  --text-inverse:     #FFFFFF;
+  --text-accent:      #134F5C;
+
+  --accent-900:       #07252D;
+  --accent-700:       #134F5C;
+  --accent-500:       #2A7A8B;
+  --accent-300:       #9CC3CC;
+  --accent-100:       #E6EFF1;
+
+  --rag-green-900:    #06502E;
+  --rag-green-700:    #0B7A4E;
+  --rag-green-500:    #10A368;
+  --rag-green-300:    #7FD4AC;
+  --rag-green-100:    #E4F5EC;
+
+  --rag-amber-900:    #5C3A04;
+  --rag-amber-700:    #9A6410;
+  --rag-amber-500:    #D9871A;
+  --rag-amber-300:    #F3C17D;
+  --rag-amber-100:    #FBF1DC;
+
+  --rag-red-900:      #6E0E0E;
+  --rag-red-700:      #B63030;
+  --rag-red-500:      #DB4343;
+  --rag-red-300:      #F0A0A0;
+  --rag-red-100:      #FBE9E9;
+
+  --font-serif: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+  --font-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono:  "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+td, th, .num { font-variant-numeric: tabular-nums; }
+
+:focus-visible {
+  outline: 2px solid var(--accent-700);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection { background: var(--accent-100); color: var(--accent-900); }
