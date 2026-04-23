@@ -36,14 +36,20 @@ function colorForAction(action: string | null): string {
 export default function BubbleChart({ data, height = 400, onBubbleClick }: BubbleChartProps) {
   const normalized = useMemo(() => {
     const maxSize = Math.max(...data.map((d) => d.bubble_size ?? d.member_count), 1);
-    return data.map((d) => ({
-      x: d.bubble_x ?? d.median_rs_rank ?? 0,
-      y: (d.bubble_y ?? d.median_ret_3m ?? 0) * 100,
-      z: Math.max(30, ((d.bubble_size ?? d.member_count) / maxSize) * 300),
-      label: d.cohort_key,
-      color: colorForAction(d.bubble_color ?? d.consensus_action),
-      count: d.member_count,
-    }));
+    return data.map((d) => {
+      const rawY = (d.bubble_y ?? d.median_ret_3m ?? 0) * 100;
+      // Clamp to avoid extreme outliers blowing up the scale
+      const y = Math.max(-30, Math.min(30, rawY));
+      return {
+        x: d.bubble_x ?? d.median_rs_rank ?? 0,
+        y,
+        rawY,
+        z: Math.max(30, ((d.bubble_size ?? d.member_count) / maxSize) * 300),
+        label: d.cohort_key,
+        color: colorForAction(d.bubble_color ?? d.consensus_action),
+        count: d.member_count,
+      };
+    });
   }, [data]);
 
   return (
@@ -69,6 +75,7 @@ export default function BubbleChart({ data, height = 400, onBubbleClick }: Bubbl
             tick={{ fontSize: 11, fill: "var(--text-tertiary)" }}
             axisLine={{ stroke: "var(--border-default)" }}
             tickLine={false}
+            domain={[-30, 30]}
             label={{ value: "Median 3M Return (%)", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "var(--text-tertiary)" } }}
           />
           <ZAxis type="number" dataKey="z" range={[30, 300]} />
@@ -93,7 +100,7 @@ export default function BubbleChart({ data, height = 400, onBubbleClick }: Bubbl
                     RS Rank: {p.x.toFixed(1)}
                   </div>
                   <div style={{ color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                    3M Ret: {p.y.toFixed(2)}%
+                    3M Ret: {p.rawY.toFixed(2)}%
                   </div>
                   <div style={{ color: "var(--text-tertiary)", marginTop: "2px" }}>{p.count} members</div>
                 </div>

@@ -221,16 +221,15 @@ export default function UnifiedDashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {aggregate.points
               .slice()
-              .sort((a, b) => (b.median_rs_rank ?? 0) - (a.median_rs_rank ?? 0))
+              .sort((a, b) => (b.pct_above_ema_50 ?? 0) - (a.pct_above_ema_50 ?? 0))
               .map((pt) => {
-                const score = pt.median_rs_rank ?? 0;
-                const pct = Math.min(100, Math.max(0, score));
+                const pct = Math.min(100, Math.max(0, pt.pct_above_ema_50 ?? 0));
                 let color = "var(--rag-red-500)";
                 let zone = "WEAK";
-                if (score > 70) { color = "var(--rag-green-500)"; zone = "HEALTHY"; }
-                else if (score > 55) { color = "var(--rag-green-400)"; zone = "HEALTHY"; }
-                else if (score > 40) { color = "var(--text-tertiary)"; zone = "NEUTRAL"; }
-                else if (score > 25) { color = "var(--rag-amber-500)"; zone = "CAUTION"; }
+                if (pct >= 70) { color = "var(--rag-green-500)"; zone = "BULLISH"; }
+                else if (pct >= 50) { color = "var(--rag-green-400)"; zone = "HEALTHY"; }
+                else if (pct >= 35) { color = "var(--text-tertiary)"; zone = "NEUTRAL"; }
+                else if (pct >= 20) { color = "var(--rag-amber-500)"; zone = "CAUTION"; }
                 return (
                   <div key={pt.cohort_key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <div style={{ width: "100px", fontSize: "12px", fontWeight: 500, color: "var(--text-primary)", flexShrink: 0 }}>
