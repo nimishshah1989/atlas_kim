@@ -205,11 +205,16 @@ async def get_cohort_aggregate(
     rs_col = _BENCHMARK_RS_COLUMN.get(benchmark, "m.rs_nifty_3m_rank")
     ret_col = _RET_COLUMN_MAP.get(period, "m.ret_3m")
 
+    # For sector cohorts, default to EQUITY only to avoid ETF theme pollution
+    effective_types = instrument_types
+    if cohort_type == "sector" and effective_types is None:
+        effective_types = ["EQUITY"]
+
     type_filter = ""
     params: dict[str, Any] = {"tenant_id": tenant_id, "target_date": target_date}
-    if instrument_types:
+    if effective_types:
         type_filter = "AND i.instrument_type = ANY(:instrument_types)"
-        params["instrument_types"] = instrument_types
+        params["instrument_types"] = effective_types
 
     sql = text(f"""
     SELECT
@@ -290,9 +295,10 @@ _ALLOWED_SCREEN_FIELDS: set[str] = {
     "frag_score",
     "action_confidence",
     "state_stability",
+    "country", "symbol", "name",
 }
 
-_INSTRUMENT_FIELDS: set[str] = {"instrument_type", "sector", "cap_category", "mf_category"}
+_INSTRUMENT_FIELDS: set[str] = {"instrument_type", "sector", "cap_category", "mf_category", "country", "symbol", "name"}
 
 _ALLOWED_OPS: set[str] = {"eq", "ne", "gt", "gte", "lt", "lte", "in", "not_in", "between", "contains"}
 
@@ -360,6 +366,11 @@ async def run_screen(
 
     where_clauses: list[str] = ["m.tenant_id = :tenant_id", "m.date = :target_date"]
     params: dict[str, Any] = {"tenant_id": tenant_id, "target_date": target_date}
+
+    # Default to India-only unless an explicit country filter is provided
+    has_country_filter = any(f.get("field") == "country" for f in filters)
+    if not has_country_filter:
+        where_clauses.append("i.country = 'IN'")
 
     for idx, f in enumerate(filters):
         field = f.get("field")
@@ -506,8 +517,14 @@ async def get_fund_rankings(
         r.total_in_category
     FROM unified_mf_rankings r
     JOIN unified_instruments i ON i.instrument_id = r.mf_id AND i.tenant_id = r.tenant_id
+    JOIN de_mf_master mm ON mm.mstar_id = r.mf_id
     WHERE r.tenant_id = :tenant_id
       AND r.date = :target_date
+      AND mm.is_etf = false
+      AND mm.is_index_fund = false
+      AND mm.broad_category = 'Equity'
+      AND (mm.fund_name ILIKE '%Reg%' OR mm.fund_name ILIKE '%Regular%')
+      AND (mm.fund_name ILIKE '%Gr%' OR mm.fund_name ILIKE '%Growth%')
     ORDER BY r.mf_category, r.rank_in_category
     """)
     result = await db.execute(sql, {"tenant_id": tenant_id, "target_date": target_date})

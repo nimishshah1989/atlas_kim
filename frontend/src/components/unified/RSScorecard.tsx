@@ -1,25 +1,53 @@
 "use client";
 
-interface ScoreCell {
-  benchmark: string;
-  period: string;
-  value: number | null;
-  rank?: number | null;
-}
+import type { MetricSnapshot } from "@/lib/api-unified";
 
 interface RSScorecardProps {
-  scores: ScoreCell[];
+  metrics: MetricSnapshot;
 }
 
-const PERIODS = ["1w", "1m", "3m", "6m", "12m"];
-const BENCHMARKS = ["NIFTY_50", "NIFTY_500", "SP500", "MSCI", "GOLD"];
+const PERIODS: { key: string; label: string }[] = [
+  { key: "1d", label: "1d" },
+  { key: "1w", label: "1w" },
+  { key: "1m", label: "1m" },
+  { key: "3m", label: "3m" },
+  { key: "6m", label: "6m" },
+  { key: "12m", label: "12m" },
+  { key: "24m", label: "24m" },
+  { key: "36m", label: "36m" },
+];
 
-export default function RSScorecard({ scores }: RSScorecardProps) {
-  const lookup = new Map<string, ScoreCell>();
-  for (const s of scores) {
-    lookup.set(`${s.benchmark}-${s.period}`, s);
-  }
+const BENCHMARKS: { key: string; label: string; prefix: string }[] = [
+  { key: "nifty", label: "Nifty", prefix: "rs_nifty" },
+  { key: "nifty500", label: "Nifty 500", prefix: "rs_nifty500" },
+  { key: "sp500", label: "S&P 500", prefix: "rs_sp500" },
+  { key: "msci", label: "MSCI", prefix: "rs_msci" },
+  { key: "gold", label: "Gold", prefix: "rs_gold" },
+];
 
+function getRank(metrics: MetricSnapshot, prefix: string, period: string): number | null {
+  const key = `${prefix}_${period}_rank` as keyof MetricSnapshot;
+  const val = metrics[key];
+  return typeof val === "number" ? val : null;
+}
+
+function rankColor(val: number | null): string {
+  if (val === null) return "var(--text-disabled)";
+  if (val >= 80) return "var(--rag-green-700)";
+  if (val >= 60) return "var(--rag-green-600)";
+  if (val >= 40) return "var(--rag-amber-600)";
+  return "var(--rag-red-700)";
+}
+
+function rankBg(val: number | null): string {
+  if (val === null) return "transparent";
+  if (val >= 80) return "var(--rag-green-50)";
+  if (val >= 60) return "var(--rag-green-25)";
+  if (val >= 40) return "var(--rag-amber-50)";
+  return "var(--rag-red-50)";
+}
+
+export default function RSScorecard({ metrics }: RSScorecardProps) {
   return (
     <div
       style={{
@@ -31,81 +59,97 @@ export default function RSScorecard({ scores }: RSScorecardProps) {
     >
       <div
         style={{
-          padding: "12px 16px",
+          padding: "10px 14px",
           borderBottom: "1px solid var(--border-subtle)",
-          fontSize: "12px",
-          fontWeight: 600,
+          fontSize: "11px",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
           color: "var(--text-primary)",
         }}
       >
-        RS Scorecard
+        RS Scorecard — Rank vs Benchmark (0-100)
       </div>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
           <thead>
             <tr style={{ background: "var(--bg-surface-alt)" }}>
               <th
                 style={{
                   textAlign: "left",
-                  padding: "8px 12px",
+                  padding: "6px 8px",
                   fontWeight: 600,
                   color: "var(--text-tertiary)",
                   borderBottom: "1px solid var(--border-subtle)",
+                  fontSize: "10px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.03em",
+                  position: "sticky",
+                  left: 0,
+                  background: "var(--bg-surface-alt)",
+                  zIndex: 1,
                 }}
               >
-                Benchmark
+                Period
               </th>
-              {PERIODS.map((p) => (
+              {BENCHMARKS.map((bm) => (
                 <th
-                  key={p}
+                  key={bm.key}
                   style={{
                     textAlign: "center",
-                    padding: "8px 12px",
+                    padding: "6px 8px",
                     fontWeight: 600,
                     color: "var(--text-tertiary)",
                     borderBottom: "1px solid var(--border-subtle)",
+                    fontSize: "10px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.03em",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  {p}
+                  {bm.label}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {BENCHMARKS.map((bm) => (
-              <tr key={bm} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+            {PERIODS.map((period) => (
+              <tr key={period.key} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                 <td
                   style={{
-                    padding: "8px 12px",
-                    fontWeight: 500,
+                    padding: "6px 8px",
+                    fontWeight: 600,
                     color: "var(--text-secondary)",
+                    fontVariantNumeric: "tabular-nums",
+                    position: "sticky",
+                    left: 0,
+                    background: "var(--bg-surface)",
+                    zIndex: 1,
+                    fontSize: "11px",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  {bm.replace(/_/g, " ")}
+                  {period.label}
                 </td>
-                {PERIODS.map((p) => {
-                  const cell = lookup.get(`${bm}-${p}`);
-                  const val = cell?.value ?? null;
-                  const color =
-                    val === null
-                      ? "var(--text-disabled)"
-                      : val >= 80
-                      ? "var(--rag-green-700)"
-                      : val >= 50
-                      ? "var(--text-primary)"
-                      : "var(--rag-red-700)";
+                {BENCHMARKS.map((bm) => {
+                  const val = getRank(metrics, bm.prefix, period.key);
+                  const color = rankColor(val);
+                  const bg = rankBg(val);
                   return (
                     <td
-                      key={p}
+                      key={bm.key}
                       style={{
-                        padding: "8px 12px",
+                        padding: "6px 8px",
                         textAlign: "center",
                         fontVariantNumeric: "tabular-nums",
-                        fontWeight: 600,
+                        fontWeight: 700,
                         color,
+                        background: bg,
+                        fontSize: "11px",
+                        minWidth: "48px",
                       }}
                     >
-                      {val !== null ? val.toFixed(1) : "—"}
+                      {val !== null ? val.toFixed(0) : "—"}
                     </td>
                   );
                 })}

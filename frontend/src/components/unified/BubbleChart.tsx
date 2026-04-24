@@ -11,6 +11,8 @@ import {
   ResponsiveContainer,
   Cell,
   CartesianGrid,
+  ReferenceArea,
+  ReferenceLine,
 } from "recharts";
 import type { CohortPoint } from "@/lib/api-unified";
 
@@ -29,6 +31,13 @@ const ACTION_COLORS: Record<string, string> = {
   AVOID: "var(--rag-red-600)",
 };
 
+const QUADRANT_BG = {
+  leading: "var(--rag-green-100)",
+  weakening: "var(--rag-amber-100)",
+  lagging: "var(--rag-red-100)",
+  improving: "var(--accent-100)",
+};
+
 function colorForAction(action: string | null): string {
   return ACTION_COLORS[action ?? ""] ?? "var(--text-tertiary)";
 }
@@ -38,16 +47,17 @@ export default function BubbleChart({ data, height = 400, onBubbleClick }: Bubbl
     const maxSize = Math.max(...data.map((d) => d.bubble_size ?? d.member_count), 1);
     return data.map((d) => {
       const rawY = (d.bubble_y ?? d.median_ret_3m ?? 0) * 100;
-      // Clamp to avoid extreme outliers blowing up the scale
       const y = Math.max(-30, Math.min(30, rawY));
       return {
         x: d.bubble_x ?? d.median_rs_rank ?? 0,
         y,
         rawY,
         z: Math.max(30, ((d.bubble_size ?? d.member_count) / maxSize) * 300),
-        label: d.cohort_key,
+        label: d.cohort_label ?? d.cohort_key,
+        key: d.cohort_key,
         color: colorForAction(d.bubble_color ?? d.consensus_action),
         count: d.member_count,
+        action: d.consensus_action,
       };
     });
   }, [data]);
@@ -57,6 +67,16 @@ export default function BubbleChart({ data, height = 400, onBubbleClick }: Bubbl
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+
+          {/* Quadrant backgrounds */}
+          <ReferenceArea x1={50} x2={100} y1={0} y2={30} fill={QUADRANT_BG.leading} fillOpacity={0.35} stroke="none" label={{ value: "Leading", position: "insideTopRight", fill: "var(--text-tertiary)", fontSize: 11, fontWeight: 600 }} />
+          <ReferenceArea x1={50} x2={100} y1={-30} y2={0} fill={QUADRANT_BG.weakening} fillOpacity={0.35} stroke="none" label={{ value: "Weakening", position: "insideBottomRight", fill: "var(--text-tertiary)", fontSize: 11, fontWeight: 600 }} />
+          <ReferenceArea x1={0} x2={50} y1={-30} y2={0} fill={QUADRANT_BG.lagging} fillOpacity={0.35} stroke="none" label={{ value: "Lagging", position: "insideBottomLeft", fill: "var(--text-tertiary)", fontSize: 11, fontWeight: 600 }} />
+          <ReferenceArea x1={0} x2={50} y1={0} y2={30} fill={QUADRANT_BG.improving} fillOpacity={0.35} stroke="none" label={{ value: "Improving", position: "insideTopLeft", fill: "var(--text-tertiary)", fontSize: 11, fontWeight: 600 }} />
+
+          <ReferenceLine x={50} stroke="var(--border-strong)" strokeDasharray="4 4" />
+          <ReferenceLine y={0} stroke="var(--border-strong)" strokeDasharray="4 4" />
+
           <XAxis
             type="number"
             dataKey="x"
@@ -97,19 +117,29 @@ export default function BubbleChart({ data, height = 400, onBubbleClick }: Bubbl
                 >
                   <div style={{ fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>{p.label}</div>
                   <div style={{ color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                    RS Rank: {p.x.toFixed(1)}
+                    Members: {p.count}
                   </div>
                   <div style={{ color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>
-                    3M Ret: {p.rawY.toFixed(2)}%
+                    Median RS: {p.x.toFixed(1)}
                   </div>
-                  <div style={{ color: "var(--text-tertiary)", marginTop: "2px" }}>{p.count} members</div>
+                  <div style={{ color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>
+                    Median 3M Return: {p.rawY.toFixed(2)}%
+                  </div>
+                  {p.action && (
+                    <div style={{ color: "var(--text-tertiary)", marginTop: "2px", textTransform: "uppercase", fontSize: "11px", fontWeight: 600 }}>
+                      {p.action}
+                    </div>
+                  )}
                 </div>
               );
             }}
           />
+
+
+
           <Scatter data={normalized}>
             {normalized.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.7} stroke={entry.color} strokeWidth={1} onClick={() => onBubbleClick?.(entry.label)} />
+              <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.7} stroke={entry.color} strokeWidth={1} onClick={() => onBubbleClick?.(entry.key)} />
             ))}
           </Scatter>
         </ScatterChart>

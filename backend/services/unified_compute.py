@@ -791,7 +791,114 @@ async def forward_fill_metrics(db: AsyncSession) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 5. Ensure every instrument has at least one metrics row
+# 5. Recompute boolean flags after backfill / forward-fill
+# ---------------------------------------------------------------------------
+
+async def recompute_boolean_flags(db: AsyncSession, target_date: date) -> int:
+    """Recompute above_ema_20/50 and golden_cross using current prices + EMAs."""
+    log.info("recompute_boolean_flags", date=target_date.isoformat())
+
+    sql = """
+    WITH prices AS (
+        SELECT instrument_id::text AS instrument_id, date, close AS px
+        FROM de_equity_ohlcv WHERE date = :target_date
+        UNION ALL
+        SELECT ticker, date, close FROM de_etf_ohlcv WHERE date = :target_date
+        UNION ALL
+        SELECT index_code, date, close FROM de_index_prices WHERE date = :target_date
+        UNION ALL
+        SELECT ticker, date, close FROM de_global_price_daily WHERE date = :target_date
+        UNION ALL
+        SELECT mstar_id, nav_date, nav FROM de_mf_nav_daily WHERE nav_date = :target_date
+    )
+    UPDATE unified_metrics um
+    SET
+        above_ema_20 = (p.px > um.ema_20)::boolean,
+        above_ema_50 = (p.px > um.ema_50)::boolean,
+        golden_cross = (um.ema_50 > um.ema_200)::boolean,
+        updated_at = NOW()
+    FROM prices p
+    WHERE um.tenant_id = :tenant_id
+      AND um.date = :target_date
+      AND um.instrument_id = p.instrument_id
+      AND um.ema_50 IS NOT NULL
+    """
+    await db.execute(text("SET LOCAL statement_timeout = '300000'"))
+    result = await db.execute(text(sql), {"tenant_id": TENANT_ID, "target_date": target_date})
+    await db.commit()
+
+    cnt = result.rowcount if hasattr(result, 'rowcount') else 0
+    log.info("recompute_boolean_flags_done", date=target_date.isoformat(), rows=cnt)
+    return cnt
+
+
+async def recompute_states_actions(db: AsyncSession, target_date: date) -> int:
+    """Recompute state, action, action_confidence, frag_score, frag_level."""
+    log.info("recompute_states_actions", date=target_date.isoformat())
+
+    sql = """
+    UPDATE unified_metrics um
+    SET
+        state = CASE
+            WHEN um.rs_nifty_3m_rank >= 80 AND um.rs_nifty_12m_rank >= 70 AND um.above_ema_50 = true THEN 'LEADER'
+            WHEN um.rs_nifty_3m_rank >= 60 AND um.rs_nifty_12m_rank >= 50 AND um.above_ema_50 = true THEN 'EMERGING'
+            WHEN um.rs_nifty_3m_rank < 40 AND um.rs_nifty_12m_rank < 40 AND um.above_ema_50 = false THEN 'LAGGING'
+            WHEN um.rs_nifty_3m_rank < 30 AND um.above_ema_50 = false THEN 'BROKEN'
+            WHEN um.rs_nifty_3m_rank >= 60 AND (um.rs_nifty_12m_rank < 50 OR um.above_ema_50 = false) THEN 'WEAKENING'
+            WHEN um.rs_nifty_3m_rank >= 40 AND um.rs_nifty_3m_rank < 80 AND um.above_ema_50 = true THEN 'HOLDING'
+            ELSE 'BASE'
+        END::text,
+        action = CASE
+            WHEN um.rs_nifty_3m_rank >= 80 AND um.above_ema_50 = true AND um.golden_cross = true THEN 'STRONG_ACCUMULATE'
+            WHEN um.rs_nifty_3m_rank >= 60 AND um.above_ema_50 = true THEN 'ACCUMULATE'
+            WHEN um.rs_nifty_3m_rank < 30 AND um.above_ema_50 = false THEN 'EXIT'
+            WHEN um.rs_nifty_3m_rank < 40 AND um.above_ema_50 = false THEN 'REDUCE'
+            ELSE 'HOLD'
+        END::text,
+        action_confidence = LEAST(1.0, GREATEST(0.0,
+            (COALESCE(um.rs_nifty_3m_rank, 50) / 100.0) * 0.3 +
+            (COALESCE(um.rs_nifty_12m_rank, 50) / 100.0) * 0.3 +
+            (CASE WHEN um.above_ema_50 THEN 1.0 ELSE 0.0 END) * 0.2 +
+            (CASE WHEN um.golden_cross THEN 1.0 ELSE 0.0 END) * 0.2
+        ))::double precision,
+        frag_score = LEAST(1.0, GREATEST(0.0,
+            (1.0 - COALESCE(um.rs_nifty_3m_rank, 50) / 100.0) * 0.4 +
+            (CASE WHEN um.above_ema_50 THEN 0.0 ELSE 1.0 END) * 0.3 +
+            COALESCE(ABS(um.ret_3m), 0.0) * 0.01 * 0.3
+        ))::double precision,
+        frag_level = CASE
+            WHEN LEAST(1.0, GREATEST(0.0,
+                (1.0 - COALESCE(um.rs_nifty_3m_rank, 50) / 100.0) * 0.4 +
+                (CASE WHEN um.above_ema_50 THEN 0.0 ELSE 1.0 END) * 0.3 +
+                COALESCE(ABS(um.ret_3m), 0.0) * 0.01 * 0.3
+            )) >= 0.7 THEN 'CRITICAL'
+            WHEN LEAST(1.0, GREATEST(0.0,
+                (1.0 - COALESCE(um.rs_nifty_3m_rank, 50) / 100.0) * 0.4 +
+                (CASE WHEN um.above_ema_50 THEN 0.0 ELSE 1.0 END) * 0.3 +
+                COALESCE(ABS(um.ret_3m), 0.0) * 0.01 * 0.3
+            )) >= 0.4 THEN 'HIGH'
+            WHEN LEAST(1.0, GREATEST(0.0,
+                (1.0 - COALESCE(um.rs_nifty_3m_rank, 50) / 100.0) * 0.4 +
+                (CASE WHEN um.above_ema_50 THEN 0.0 ELSE 1.0 END) * 0.3 +
+                COALESCE(ABS(um.ret_3m), 0.0) * 0.01 * 0.3
+            )) >= 0.2 THEN 'MEDIUM'
+            ELSE 'LOW'
+        END::text,
+        updated_at = NOW()
+    WHERE um.tenant_id = :tenant_id
+      AND um.date = :target_date
+    """
+    await db.execute(text("SET LOCAL statement_timeout = '300000'"))
+    result = await db.execute(text(sql), {"tenant_id": TENANT_ID, "target_date": target_date})
+    await db.commit()
+
+    cnt = result.rowcount if hasattr(result, 'rowcount') else 0
+    log.info("recompute_states_actions_done", date=target_date.isoformat(), rows=cnt)
+    return cnt
+
+
+# ---------------------------------------------------------------------------
+# 6. Ensure every instrument has at least one metrics row
 # ---------------------------------------------------------------------------
 
 async def ensure_latest_metrics_for_all(db: AsyncSession) -> dict[str, int]:
@@ -971,11 +1078,18 @@ async def ensure_latest_metrics_for_all(db: AsyncSession) -> dict[str, int]:
 # 6. Market Regime
 # ---------------------------------------------------------------------------
 
-async def compute_market_regime(db: AsyncSession, target_date: date) -> int:
-    log.info("compute_market_regime", date=target_date.isoformat())
+async def compute_market_regime(db: AsyncSession, target_date: date, region: str = "IN") -> int:
+    log.info("compute_market_regime", date=target_date.isoformat(), region=region)
 
-    sql = """
-    WITH params AS (SELECT CAST(:target_date AS date) AS d, CAST(:tenant_id AS varchar) AS t),
+    if region == "IN":
+        type_filter = "i.instrument_type IN ('EQUITY', 'ETF')"
+        country_filter = "i.country = 'IN'"
+    else:
+        type_filter = "i.instrument_type IN ('INDEX_GLOBAL', 'ETF')"
+        country_filter = "i.country != 'IN'"
+
+    sql = f"""
+    WITH params AS (SELECT CAST(:target_date AS date) AS d, CAST(:tenant_id AS varchar) AS t, CAST(:region AS varchar) AS r),
     daily AS (
         SELECT
             COUNT(*) AS total,
@@ -990,16 +1104,18 @@ async def compute_market_regime(db: AsyncSession, target_date: date) -> int:
         CROSS JOIN params p
         WHERE m.tenant_id = p.t
           AND m.date = p.d
-          AND i.instrument_type IN ('EQUITY', 'ETF')
+          AND {type_filter}
+          AND {country_filter}
     )
     INSERT INTO unified_market_regime (
-        date, tenant_id,
+        date, tenant_id, region,
         pct_above_ema_20, pct_above_ema_50, pct_above_ema_200, pct_golden_cross,
         participation, rs_dispersion, health_score, health_zone, regime, direction
     )
     SELECT
         p.d,
         p.t,
+        p.r,
         d.pct_above_ema_20::double precision,
         d.pct_above_ema_50::double precision,
         NULL::double precision,
@@ -1032,7 +1148,7 @@ async def compute_market_regime(db: AsyncSession, target_date: date) -> int:
             ELSE 'DETERIORATING'
         END::text AS direction
     FROM daily d, params p
-    ON CONFLICT (date, tenant_id) DO UPDATE SET
+    ON CONFLICT (date, tenant_id, region) DO UPDATE SET
         pct_above_ema_20 = EXCLUDED.pct_above_ema_20,
         pct_above_ema_50 = EXCLUDED.pct_above_ema_50,
         pct_golden_cross = EXCLUDED.pct_golden_cross,
@@ -1044,7 +1160,7 @@ async def compute_market_regime(db: AsyncSession, target_date: date) -> int:
         direction        = EXCLUDED.direction,
         updated_at       = NOW()
     """
-    await db.execute(text(sql), {"tenant_id": TENANT_ID, "target_date": target_date})
+    await db.execute(text(sql), {"tenant_id": TENANT_ID, "target_date": target_date, "region": region})
     await db.commit()
     return 1
 
@@ -1199,17 +1315,40 @@ async def run_pipeline(
             await db.rollback()
             results["phases"].append({"phase": "ensure_coverage", "status": "FAILED", "error": str(exc)})
 
-        # Phase 3: Market Regime
-        total_regime = 0
+        # Phase 2e: Recompute boolean flags + states/actions for all target dates
+        total_booleans = 0
+        total_states = 0
         for target_date in dates_to_compute:
             if target_date.weekday() >= 5:
                 continue
             try:
-                await compute_market_regime(db, target_date)
-                total_regime += 1
+                n = await recompute_boolean_flags(db, target_date)
+                total_booleans += n
             except Exception as exc:
-                log.warning("regime_date_failed", date=target_date.isoformat(), error=str(exc))
+                log.warning("recompute_boolean_flags_failed", date=target_date.isoformat(), error=str(exc))
                 await db.rollback()
+            try:
+                n = await recompute_states_actions(db, target_date)
+                total_states += n
+            except Exception as exc:
+                log.warning("recompute_states_actions_failed", date=target_date.isoformat(), error=str(exc))
+                await db.rollback()
+
+        results["phases"].append({"phase": "recompute_booleans", "status": "SUCCESS", "rows": total_booleans})
+        results["phases"].append({"phase": "recompute_states", "status": "SUCCESS", "rows": total_states})
+
+        # Phase 3: Market Regime (IN + GLOBAL)
+        total_regime = 0
+        for target_date in dates_to_compute:
+            if target_date.weekday() >= 5:
+                continue
+            for region in ("IN", "GLOBAL"):
+                try:
+                    await compute_market_regime(db, target_date, region=region)
+                    total_regime += 1
+                except Exception as exc:
+                    log.warning("regime_date_failed", date=target_date.isoformat(), region=region, error=str(exc))
+                    await db.rollback()
 
         await _log_phase(db, "regime", "SUCCESS" if total_regime > 0 else "PARTIAL", rows_processed=total_regime)
         results["phases"].append({"phase": "regime", "status": "SUCCESS", "rows": total_regime})
