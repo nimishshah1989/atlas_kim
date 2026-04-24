@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUnifiedData, useUnifiedDataPost } from "@/hooks/useUnifiedData";
+import { humanizeRegime } from "@/lib/formatters";
 import BubbleChart from "@/components/unified/BubbleChart";
 import ActionBadge from "@/components/unified/ActionBadge";
 import DataFreshness from "@/components/unified/DataFreshness";
@@ -309,7 +310,7 @@ function CompactRegimeGauge({
           color: regimeColor(regime),
         }}
       >
-        {regime}
+        {humanizeRegime(regime)}
       </div>
       <div style={{ fontSize: "10px", color: "var(--text-tertiary)" }}>
         {directionArrow(direction)}
