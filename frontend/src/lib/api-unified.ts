@@ -91,6 +91,7 @@ export interface MetricSnapshot {
   ema_200: number | null;
   above_ema_20: boolean | null;
   above_ema_50: boolean | null;
+  above_ema_200: boolean | null;
   golden_cross: boolean | null;
   rsi_14: number | null;
   macd: number | null;

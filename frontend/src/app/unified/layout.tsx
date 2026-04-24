@@ -8,7 +8,9 @@ const NAV_ITEMS = [
   { label: "Sectors", href: "/unified/sectors" },
   { label: "Funds", href: "/unified/funds" },
   { label: "Leaders", href: "/unified/leaders" },
+  { label: "Emerging", href: "/unified/emerging" },
   { label: "Weakening", href: "/unified/weakening" },
+  { label: "Fragile", href: "/unified/fragile" },
   { label: "Global", href: "/unified/global" },
 ];
 

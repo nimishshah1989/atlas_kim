@@ -87,17 +87,19 @@ function formatPct(val: number | null) {
   return `${val.toFixed(1)}%`;
 }
 
+import { humanizeRegime } from "@/lib/formatters";
+
 function regimeSummary(regime: RegimeResponse | null) {
   if (!regime) return null;
-  const r = regime.regime ?? "UNKNOWN";
+  const r = humanizeRegime(regime.regime);
   const pct = regime.metrics.pct_above_ema_50 ?? 0;
-  const pctFmt = (pct * 100).toFixed(0);
+  const pctFmt = pct.toFixed(0);
   let sentence = "";
-  if (r.includes("CAUTION") || r.includes("DEFENSIVE")) {
+  if (r.includes("Caution") || r.includes("Defensive")) {
     sentence = `Market is ${r}. ${pctFmt}% of stocks above EMA-50. Selective accumulation in leaders.`;
-  } else if (r.includes("RISK_ON") || r.includes("BULLISH")) {
+  } else if (r.includes("Risk On") || r.includes("Bullish")) {
     sentence = `Market is ${r}. ${pctFmt}% of stocks above EMA-50. Broad participation supports accumulation.`;
-  } else if (r.includes("BEARISH") || r.includes("DISTRIBUTION")) {
+  } else if (r.includes("Bearish") || r.includes("Distribution")) {
     sentence = `Market is ${r}. ${pctFmt}% of stocks above EMA-50. Defensive posture warranted.`;
   } else {
     sentence = `Market is ${r}. ${pctFmt}% of stocks above EMA-50.`;
@@ -265,7 +267,7 @@ export default function SectorsPage() {
               borderRadius: "999px",
             }}
           >
-            {regimeData.regime ?? "UNKNOWN"}
+            {humanizeRegime(regimeData.regime)}
           </span>
           <span style={{ fontSize: "13px", color: "var(--text-primary)", flex: 1, minWidth: "200px" }}>
             {regimeSummary(regimeData)}

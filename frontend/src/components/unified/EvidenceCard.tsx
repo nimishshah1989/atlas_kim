@@ -133,7 +133,7 @@ export default function EvidenceCard({
             <span style={{ width: "1px", height: "16px", background: "var(--border-subtle)", flexShrink: 0 }} />
             {boolBadge(metrics.above_ema_20, "EMA-20")}
             {boolBadge(metrics.above_ema_50, "EMA-50")}
-            {boolBadge(metrics.above_ema_50, "EMA-200")}
+            {boolBadge(metrics.above_ema_200, "EMA-200")}
             {boolBadge(metrics.golden_cross, "Golden Cross")}
             <span style={{ width: "1px", height: "16px", background: "var(--border-subtle)", flexShrink: 0 }} />
             <MetricPill label="% from 52W" value={(metrics as unknown as Record<string, number | null>).pct_from_52w_high !== undefined ? fmtNum((metrics as unknown as Record<string, number | null>).pct_from_52w_high, 1) + "%" : "—"} />

@@ -184,7 +184,7 @@ function TechnicalSnapshot({ metrics }: { metrics: MetricSnapshot }) {
           <TechRow label="RSI-14" value={fmtNum(metrics.rsi_14, 1)} color={rsiColor(metrics.rsi_14)} />
           <TechRow label="EMA-20" value={metrics.above_ema_20 === null ? "—" : metrics.above_ema_20 ? "Above" : "Below"} color={boolColor(metrics.above_ema_20)} />
           <TechRow label="EMA-50" value={metrics.above_ema_50 === null ? "—" : metrics.above_ema_50 ? "Above" : "Below"} color={boolColor(metrics.above_ema_50)} />
-          <TechRow label="EMA-200" value={metrics.above_ema_50 === null ? "—" : metrics.above_ema_50 ? "Above" : "Below"} color={boolColor(metrics.above_ema_50)} />
+          <TechRow label="EMA-200" value={metrics.above_ema_200 === null ? "—" : metrics.above_ema_200 ? "Above" : "Below"} color={boolColor(metrics.above_ema_200)} />
           <TechRow label="MACD" value={macd.text} color={macd.color} />
         </div>
         {/* Right column */}

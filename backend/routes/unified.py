@@ -342,9 +342,17 @@ async def get_regime(
     )
     narrative_block = NarrativeBlock(**narrative)
 
+    _REGIME_MAP = {
+        "BULLISH_FULL_RISK": "Bullish (Full Risk)",
+        "CAUTION_SELECTIVE": "Caution — Selective",
+        "CAUTION_DEFENSIVE": "Caution — Defensive",
+        "BEARISH_ACCUMULATE": "Bearish — Accumulate",
+    }
+    regime_label = _REGIME_MAP.get(row.get("regime"), row.get("regime"))
+
     elapsed_ms = int((time.monotonic() - t0) * 1000)
     return RegimeResponse(
-        regime=row.get("regime"),
+        regime=regime_label,
         direction=row.get("direction"),
         metrics=metrics,
         narrative=narrative_block,
@@ -643,9 +651,17 @@ async def get_global_regime(
     )
     narrative_block = NarrativeBlock(**narrative)
 
+    _REGIME_MAP = {
+        "BULLISH_FULL_RISK": "Bullish (Full Risk)",
+        "CAUTION_SELECTIVE": "Caution — Selective",
+        "CAUTION_DEFENSIVE": "Caution — Defensive",
+        "BEARISH_ACCUMULATE": "Bearish — Accumulate",
+    }
+    regime_label = _REGIME_MAP.get(row.get("regime"), row.get("regime"))
+
     elapsed_ms = int((time.monotonic() - t0) * 1000)
     return RegimeResponse(
-        regime=row.get("regime"),
+        regime=regime_label,
         direction=row.get("direction"),
         metrics=metrics,
         narrative=narrative_block,

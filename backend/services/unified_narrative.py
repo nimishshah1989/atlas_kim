@@ -29,6 +29,28 @@ _DD_DEEP = -20.0
 
 
 # ---------------------------------------------------------------------------
+# Label humanizers
+# ---------------------------------------------------------------------------
+
+_STATE_MAP = {
+    "LEADER": "Leader",
+    "EMERGING": "Emerging",
+    "WEAKENING": "Weakening",
+    "LAGGING": "Lagging",
+    "BROKEN": "Broken",
+    "HOLDING": "Holding",
+    "BASE": "Base",
+}
+
+_FRAG_LEVEL_MAP = {
+    "LOW": "Low",
+    "MEDIUM": "Medium",
+    "HIGH": "High",
+    "CRITICAL": "Critical",
+}
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -199,16 +221,17 @@ def generate_narrative(
         reasons.append(f"21-day realised volatility is low ({_fmt_num(vol_21d)}%) — calm environment.")
 
     # --- State / Action ---
+    state_label = _STATE_MAP.get(state, state)
     if state == "LEADER":
-        reasons.append("Instrument is classified as LEADER — top quintile RS with positive momentum.")
+        reasons.append(f"Instrument is classified as {state_label} — top quintile RS with positive momentum.")
     elif state == "EMERGING":
-        reasons.append("Instrument is EMERGING — improving RS trajectory, early stage.")
+        reasons.append(f"Instrument is {state_label} — improving RS trajectory, early stage.")
     elif state == "WEAKENING":
-        risks.append("Instrument is WEAKENING — RS is deteriorating; monitor closely.")
+        risks.append(f"Instrument is {state_label} — RS is deteriorating; monitor closely.")
     elif state == "LAGGING":
-        risks.append("Instrument is LAGGING — persistent underperformer.")
+        risks.append(f"Instrument is {state_label} — persistent underperformer.")
     elif state == "BROKEN":
-        risks.append("Instrument is BROKEN — structural damage in trend; avoid fresh entry.")
+        risks.append(f"Instrument is {state_label} — structural damage in trend; avoid fresh entry.")
 
     # --- Regime context ---
     _REGIME_MAP = {
@@ -252,12 +275,12 @@ def generate_narrative(
 
         if leader_pct is not None:
             if leader_pct >= 40:
-                reasons.append(f"{_fmt_num(leader_pct)}% of holdings are in LEADER state — high-quality underlying exposure.")
+                reasons.append(f"{_fmt_num(leader_pct)}% of holdings are in Leader state — high-quality underlying exposure.")
             elif leader_pct <= 10:
-                risks.append(f"Only {_fmt_num(leader_pct)}% of holdings are in LEADER state — portfolio quality is weak.")
+                risks.append(f"Only {_fmt_num(leader_pct)}% of holdings are in Leader state — portfolio quality is weak.")
 
         if broken_pct is not None and broken_pct >= 20:
-            risks.append(f"{_fmt_num(broken_pct)}% of holdings are in BROKEN state — significant portfolio damage.")
+            risks.append(f"{_fmt_num(broken_pct)}% of holdings are in Broken state — significant portfolio damage.")
 
         if top_sector:
             reasons.append(f"Top sector exposure is {top_sector}.")
@@ -316,7 +339,7 @@ def generate_narrative(
 
         if leader_pct is not None:
             if leader_pct >= 30:
-                reasons.append(f"{_fmt_num(leader_pct)}% of constituents are in LEADER state — broad market health is good.")
+                reasons.append(f"{_fmt_num(leader_pct)}% of constituents are in Leader state — broad market health is good.")
             elif leader_pct <= 10:
                 risks.append(f"Only {_fmt_num(leader_pct)}% of constituents are leaders — market breadth is narrow.")
 
@@ -372,14 +395,16 @@ def generate_narrative(
     elif golden_cross is False and above_ema_50 is True:
         trend_phrase = "bullish short-term, cautious medium-term"
 
+    frag_label = _FRAG_LEVEL_MAP.get(frag_level, frag_level)
+    state_label = _STATE_MAP.get(state, state)
     technical_snapshot = (
         f"The trend is {trend_phrase}. "
         f"RS rank stands at {_fmt_num(rs_3m)} over 3 months and {_fmt_num(rs_12m)} over 12 months. "
         f"Returns are {_fmt_pct(ret_3m)} (3m) and {_fmt_pct(ret_12m)} (12m). "
         f"RSI-14 is {_fmt_num(rsi)}. "
-        f"Fragility score is {_fmt_num(frag_score)} ({frag_level or 'unknown'}). "
+        f"Fragility score is {_fmt_num(frag_score)} ({frag_label or 'unknown'}). "
         f"Max drawdown over 252 days is {_fmt_pct(max_dd)}. "
-        f"Current state is {state or 'unknown'}."
+        f"Current state is {state_label or 'unknown'}."
     )
 
     return {
