@@ -2321,6 +2321,39 @@
             ],
             "title": "Ret 12M"
           },
+          "ret_24m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 24M"
+          },
+          "ret_36m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret 36M"
+          },
+          "ret_ytd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ret Ytd"
+          },
           "ema_20": {
             "anyOf": [
               {
@@ -2376,6 +2409,17 @@
             ],
             "title": "Above Ema 50"
           },
+          "above_ema_200": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Above Ema 200"
+          },
           "golden_cross": {
             "anyOf": [
               {
@@ -2419,6 +2463,17 @@
               }
             ],
             "title": "Vol 21D"
+          },
+          "vol_63d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vol 63D"
           },
           "max_dd_252d": {
             "anyOf": [
@@ -2486,6 +2541,39 @@
             ],
             "title": "Pct From 52W High"
           },
+          "rs_nifty_1d_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 1D Rank"
+          },
+          "rs_nifty_1w_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 1W Rank"
+          },
+          "rs_nifty_1m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 1M Rank"
+          },
           "rs_nifty_3m_rank": {
             "anyOf": [
               {
@@ -2496,6 +2584,17 @@
               }
             ],
             "title": "Rs Nifty 3M Rank"
+          },
+          "rs_nifty_6m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 6M Rank"
           },
           "rs_nifty_12m_rank": {
             "anyOf": [
@@ -2508,6 +2607,116 @@
             ],
             "title": "Rs Nifty 12M Rank"
           },
+          "rs_nifty_24m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 24M Rank"
+          },
+          "rs_nifty_36m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 36M Rank"
+          },
+          "rs_nifty_1d_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 1D Momentum"
+          },
+          "rs_nifty_1w_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 1W Momentum"
+          },
+          "rs_nifty_1m_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 1M Momentum"
+          },
+          "rs_nifty_3m_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 3M Momentum"
+          },
+          "rs_nifty_6m_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 6M Momentum"
+          },
+          "rs_nifty_12m_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 12M Momentum"
+          },
+          "rs_nifty_24m_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 24M Momentum"
+          },
+          "rs_nifty_36m_momentum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty 36M Momentum"
+          },
           "rs_nifty_persistence": {
             "anyOf": [
               {
@@ -2518,6 +2727,402 @@
               }
             ],
             "title": "Rs Nifty Persistence"
+          },
+          "rs_nifty500_1d_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 1D Rank"
+          },
+          "rs_nifty500_1w_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 1W Rank"
+          },
+          "rs_nifty500_1m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 1M Rank"
+          },
+          "rs_nifty500_3m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 3M Rank"
+          },
+          "rs_nifty500_6m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 6M Rank"
+          },
+          "rs_nifty500_12m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 12M Rank"
+          },
+          "rs_nifty500_24m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 24M Rank"
+          },
+          "rs_nifty500_36m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 36M Rank"
+          },
+          "rs_nifty500_persistence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Nifty500 Persistence"
+          },
+          "rs_sp500_1d_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 1D Rank"
+          },
+          "rs_sp500_1w_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 1W Rank"
+          },
+          "rs_sp500_1m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 1M Rank"
+          },
+          "rs_sp500_3m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 3M Rank"
+          },
+          "rs_sp500_6m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 6M Rank"
+          },
+          "rs_sp500_12m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 12M Rank"
+          },
+          "rs_sp500_24m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 24M Rank"
+          },
+          "rs_sp500_36m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 36M Rank"
+          },
+          "rs_sp500_persistence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Sp500 Persistence"
+          },
+          "rs_msci_1d_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 1D Rank"
+          },
+          "rs_msci_1w_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 1W Rank"
+          },
+          "rs_msci_1m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 1M Rank"
+          },
+          "rs_msci_3m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 3M Rank"
+          },
+          "rs_msci_6m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 6M Rank"
+          },
+          "rs_msci_12m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 12M Rank"
+          },
+          "rs_msci_24m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 24M Rank"
+          },
+          "rs_msci_36m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci 36M Rank"
+          },
+          "rs_msci_persistence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Msci Persistence"
+          },
+          "rs_gold_1d_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 1D Rank"
+          },
+          "rs_gold_1w_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 1W Rank"
+          },
+          "rs_gold_1m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 1M Rank"
+          },
+          "rs_gold_3m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 3M Rank"
+          },
+          "rs_gold_6m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 6M Rank"
+          },
+          "rs_gold_12m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 12M Rank"
+          },
+          "rs_gold_24m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 24M Rank"
+          },
+          "rs_gold_36m_rank": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold 36M Rank"
+          },
+          "rs_gold_persistence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rs Gold Persistence"
           },
           "state": {
             "anyOf": [

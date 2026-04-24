@@ -145,6 +145,7 @@ class UnifiedMetric(Base):
     ret_12m: Mapped[float | None] = mapped_column(Double, nullable=True)
     ret_24m: Mapped[float | None] = mapped_column(Double, nullable=True)
     ret_36m: Mapped[float | None] = mapped_column(Double, nullable=True)
+    ret_ytd: Mapped[float | None] = mapped_column(Double, nullable=True)
 
     # Trend / EMA
     ema_20: Mapped[float | None] = mapped_column(Double, nullable=True)
@@ -152,6 +153,7 @@ class UnifiedMetric(Base):
     ema_200: Mapped[float | None] = mapped_column(Double, nullable=True)
     above_ema_20: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     above_ema_50: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    above_ema_200: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     golden_cross: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # Volume
@@ -190,20 +192,44 @@ class UnifiedMetric(Base):
     rs_nifty_36m_momentum: Mapped[float | None] = mapped_column(Double, nullable=True)
 
     # RS vs Nifty 500
+    rs_nifty500_1d_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_nifty500_1w_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_nifty500_1m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_nifty500_3m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_nifty500_6m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_nifty500_12m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_nifty500_24m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_nifty500_36m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
 
     # RS vs S&P 500
+    rs_sp500_1d_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_sp500_1w_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_sp500_1m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_sp500_3m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_sp500_6m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_sp500_12m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_sp500_24m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_sp500_36m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
 
     # RS vs MSCI World
+    rs_msci_1d_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_msci_1w_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_msci_1m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_msci_3m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_msci_6m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_msci_12m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_msci_24m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_msci_36m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
 
     # RS vs Gold
+    rs_gold_1d_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_gold_1w_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_gold_1m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_gold_3m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_gold_6m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
     rs_gold_12m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_gold_24m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
+    rs_gold_36m_rank: Mapped[float | None] = mapped_column(Double, nullable=True)
 
     # RS Persistence
     rs_nifty_persistence: Mapped[float | None] = mapped_column(Double, nullable=True)

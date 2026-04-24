@@ -276,6 +276,7 @@ _ALLOWED_SCREEN_FIELDS: set[str] = {
     "frag_level",
     "above_ema_20",
     "above_ema_50",
+    "above_ema_200",
     "golden_cross",
     "rs_nifty_3m_rank",
     "rs_nifty_12m_rank",

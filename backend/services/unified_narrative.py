@@ -211,14 +211,21 @@ def generate_narrative(
         risks.append("Instrument is BROKEN — structural damage in trend; avoid fresh entry.")
 
     # --- Regime context ---
+    _REGIME_MAP = {
+        "BULLISH_FULL_RISK": "Bullish (Full Risk)",
+        "CAUTION_SELECTIVE": "Caution — Selective",
+        "CAUTION_DEFENSIVE": "Caution — Defensive",
+        "BEARISH_ACCUMULATE": "Bearish (Accumulate)",
+    }
+    regime_label = _REGIME_MAP.get(regime, regime)
     if regime == "BULLISH_FULL_RISK":
-        reasons.append("Market regime is BULLISH_FULL_RISK — broad participation supports risk-on positioning.")
+        reasons.append(f"Market regime is {regime_label} — broad participation supports risk-on positioning.")
     elif regime == "CAUTION_SELECTIVE":
-        reasons.append("Market regime is CAUTION_SELECTIVE — stock picking matters more than beta.")
+        reasons.append(f"Market regime is {regime_label} — stock picking matters more than beta.")
     elif regime == "CAUTION_DEFENSIVE":
-        risks.append("Market regime is CAUTION_DEFENSIVE — raise cash and favour quality.")
+        risks.append(f"Market regime is {regime_label} — raise cash and favour quality.")
     elif regime == "BEARISH_ACCUMULATE":
-        reasons.append("Market regime is BEARISH_ACCUMULATE — long-term accumulation zones may be forming.")
+        reasons.append(f"Market regime is {regime_label} — long-term accumulation zones may be forming.")
         risks.append("Short-term downside pressure remains; stagger entries.")
 
     if direction == "DETERIORATING":
@@ -366,13 +373,13 @@ def generate_narrative(
         trend_phrase = "bullish short-term, cautious medium-term"
 
     technical_snapshot = (
-        f"Trend is {trend_phrase}. "
-        f"RS 3m / 12m rank: {_fmt_num(rs_3m)} / {_fmt_num(rs_12m)}. "
-        f"Returns (3m / 12m): {_fmt_pct(ret_3m)} / {_fmt_pct(ret_12m)}. "
-        f"RSI-14: {_fmt_num(rsi)}. "
-        f"Fragility: {_fmt_num(frag_score)} ({frag_level or 'unknown'}). "
-        f"Max DD: {_fmt_pct(max_dd)}. "
-        f"State: {state or 'unknown'}."
+        f"The trend is {trend_phrase}. "
+        f"RS rank stands at {_fmt_num(rs_3m)} over 3 months and {_fmt_num(rs_12m)} over 12 months. "
+        f"Returns are {_fmt_pct(ret_3m)} (3m) and {_fmt_pct(ret_12m)} (12m). "
+        f"RSI-14 is {_fmt_num(rsi)}. "
+        f"Fragility score is {_fmt_num(frag_score)} ({frag_level or 'unknown'}). "
+        f"Max drawdown over 252 days is {_fmt_pct(max_dd)}. "
+        f"Current state is {state or 'unknown'}."
     )
 
     return {

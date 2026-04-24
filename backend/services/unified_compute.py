@@ -367,6 +367,7 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
             t.ema_200::double precision,
             (pu.px > t.ema_20)::boolean AS above_ema_20,
             (pu.px > t.ema_50)::boolean AS above_ema_50,
+            (pu.px > t.ema_200)::boolean AS above_ema_200,
             (t.ema_50 > t.ema_200)::boolean AS golden_cross,
             t.rsi_14::double precision,
             t.macd::double precision,
@@ -386,7 +387,7 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
     INSERT INTO unified_metrics (
         tenant_id, instrument_id, date,
         ret_1d, ret_1w, ret_1m, ret_3m, ret_6m, ret_12m, ret_24m, ret_36m,
-        ema_20, ema_50, ema_200, above_ema_20, above_ema_50, golden_cross,
+        ema_20, ema_50, ema_200, above_ema_20, above_ema_50, above_ema_200, golden_cross,
         rvol_20d, vol_21d, vol_63d,
         max_dd_252d, current_dd,
         rsi_14, macd, macd_signal,
@@ -402,7 +403,7 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         c.instrument_id,
         c.date,
         c.ret_1d, c.ret_1w, c.ret_1m, c.ret_3m, c.ret_6m, c.ret_12m, c.ret_24m, c.ret_36m,
-        c.ema_20, c.ema_50, c.ema_200, c.above_ema_20, c.above_ema_50, c.golden_cross,
+        c.ema_20, c.ema_50, c.ema_200, c.above_ema_20, c.above_ema_50, c.above_ema_200, c.golden_cross,
         c.vol_21d, c.vol_21d, c.vol_21d,
         c.max_dd_252d, c.max_dd_252d,
         c.rsi_14, c.macd, c.macd_signal,
@@ -474,6 +475,7 @@ async def compute_metrics_for_date(db: AsyncSession, target_date: date) -> int:
         ema_200          = EXCLUDED.ema_200,
         above_ema_20     = EXCLUDED.above_ema_20,
         above_ema_50     = EXCLUDED.above_ema_50,
+        above_ema_200    = EXCLUDED.above_ema_200,
         golden_cross     = EXCLUDED.golden_cross,
         rvol_20d         = EXCLUDED.rvol_20d,
         vol_21d          = EXCLUDED.vol_21d,
@@ -693,7 +695,7 @@ async def forward_fill_metrics(db: AsyncSession) -> int:
     INSERT INTO unified_metrics (
         tenant_id, instrument_id, date,
         ret_1d, ret_1w, ret_1m, ret_3m, ret_6m, ret_12m, ret_24m, ret_36m,
-        ema_20, ema_50, ema_200, above_ema_20, above_ema_50, golden_cross,
+        ema_20, ema_50, ema_200, above_ema_20, above_ema_50, above_ema_200, golden_cross,
         rvol_20d, vol_21d, vol_63d,
         max_dd_252d, current_dd,
         rsi_14, macd, macd_signal,
@@ -709,7 +711,7 @@ async def forward_fill_metrics(db: AsyncSession) -> int:
         m.instrument_id,
         g.max_date,
         m.ret_1d, m.ret_1w, m.ret_1m, m.ret_3m, m.ret_6m, m.ret_12m, m.ret_24m, m.ret_36m,
-        m.ema_20, m.ema_50, m.ema_200, m.above_ema_20, m.above_ema_50, m.golden_cross,
+        m.ema_20, m.ema_50, m.ema_200, m.above_ema_20, m.above_ema_50, m.above_ema_200, m.golden_cross,
         m.rvol_20d, m.vol_21d, m.vol_63d,
         m.max_dd_252d, m.current_dd,
         m.rsi_14, m.macd, m.macd_signal,
@@ -753,6 +755,7 @@ async def forward_fill_metrics(db: AsyncSession) -> int:
         ema_200          = EXCLUDED.ema_200,
         above_ema_20     = EXCLUDED.above_ema_20,
         above_ema_50     = EXCLUDED.above_ema_50,
+        above_ema_200    = EXCLUDED.above_ema_200,
         golden_cross     = EXCLUDED.golden_cross,
         rvol_20d         = EXCLUDED.rvol_20d,
         vol_21d          = EXCLUDED.vol_21d,
@@ -815,6 +818,7 @@ async def recompute_boolean_flags(db: AsyncSession, target_date: date) -> int:
     SET
         above_ema_20 = (p.px > um.ema_20)::boolean,
         above_ema_50 = (p.px > um.ema_50)::boolean,
+        above_ema_200 = (p.px > um.ema_200)::boolean,
         golden_cross = (um.ema_50 > um.ema_200)::boolean,
         updated_at = NOW()
     FROM prices p
@@ -1024,7 +1028,7 @@ async def ensure_latest_metrics_for_all(db: AsyncSession) -> dict[str, int]:
     )
     INSERT INTO unified_metrics (
         tenant_id, instrument_id, date,
-        ema_20, ema_50, ema_200,
+        ema_20, ema_50, ema_200, above_ema_200,
         rsi_14, macd, macd_signal,
         vol_21d, max_dd_252d,
         state, action, frag_score, frag_level,
@@ -1034,7 +1038,7 @@ async def ensure_latest_metrics_for_all(db: AsyncSession) -> dict[str, int]:
         :tenant_id,
         lp.instrument_id,
         lp.date,
-        lt.ema_20, lt.ema_50, lt.ema_200,
+        lt.ema_20, lt.ema_50, lt.ema_200, (lp.px > lt.ema_200)::boolean,
         lt.rsi_14, lt.macd, lt.macd_signal,
         lt.volatility_20d, lt.max_drawdown_1y,
         'BASE'::text,
@@ -1048,6 +1052,7 @@ async def ensure_latest_metrics_for_all(db: AsyncSession) -> dict[str, int]:
         ema_20 = EXCLUDED.ema_20,
         ema_50 = EXCLUDED.ema_50,
         ema_200 = EXCLUDED.ema_200,
+        above_ema_200 = EXCLUDED.above_ema_200,
         rsi_14 = EXCLUDED.rsi_14,
         macd = EXCLUDED.macd,
         macd_signal = EXCLUDED.macd_signal,

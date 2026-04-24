@@ -127,7 +127,6 @@ export default function IndexPulse({ data, state }: { data: ScreenerResponse | n
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px" }}>
         {KEY_INDICES.map((idx) => {
           const row = bySymbol.get(idx.symbol);
-          const ret1m = row?.ret_1m ?? null;
           const ret3m = row?.ret_3m ?? null;
           const signal = signalLabel(row);
           const sColor = signalColor(row);
@@ -168,11 +167,7 @@ export default function IndexPulse({ data, state }: { data: ScreenerResponse | n
                     {ret3m >= 0 ? "+" : ""}{(ret3m * 100).toFixed(1)}%
                   </span>
                 )}
-                {ret1m != null && (
-                  <span style={{ fontSize: "11px", color: retColor(ret1m), fontVariantNumeric: "tabular-nums" }}>
-                    1M {ret1m >= 0 ? "+" : ""}{(ret1m * 100).toFixed(1)}%
-                  </span>
-                )}
+
               </div>
               <div style={{ fontSize: "10px", color: "var(--text-tertiary)" }}>
                 {row?.state ?? "—"} · RS {row?.rs_nifty_3m_rank?.toFixed(0) ?? "—"}

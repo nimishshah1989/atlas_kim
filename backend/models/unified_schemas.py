@@ -91,6 +91,9 @@ class MetricSnapshot(BaseModel):
     ret_3m: Optional[float] = None
     ret_6m: Optional[float] = None
     ret_12m: Optional[float] = None
+    ret_24m: Optional[float] = None
+    ret_36m: Optional[float] = None
+    ret_ytd: Optional[float] = None
 
     # Trend
     ema_20: Optional[float] = None
@@ -98,6 +101,7 @@ class MetricSnapshot(BaseModel):
     ema_200: Optional[float] = None
     above_ema_20: Optional[bool] = None
     above_ema_50: Optional[bool] = None
+    above_ema_200: Optional[bool] = None
     golden_cross: Optional[bool] = None
 
     # Volume
@@ -106,6 +110,7 @@ class MetricSnapshot(BaseModel):
 
     # Risk
     vol_21d: Optional[float] = None
+    vol_63d: Optional[float] = None
     max_dd_252d: Optional[float] = None
     current_dd: Optional[float] = None
 
@@ -115,10 +120,70 @@ class MetricSnapshot(BaseModel):
     macd_signal: Optional[float] = None
     pct_from_52w_high: Optional[float] = None
 
-    # RS (primary — Nifty)
+    # RS vs Nifty — 8 periods
+    rs_nifty_1d_rank: Optional[float] = None
+    rs_nifty_1w_rank: Optional[float] = None
+    rs_nifty_1m_rank: Optional[float] = None
     rs_nifty_3m_rank: Optional[float] = None
+    rs_nifty_6m_rank: Optional[float] = None
     rs_nifty_12m_rank: Optional[float] = None
+    rs_nifty_24m_rank: Optional[float] = None
+    rs_nifty_36m_rank: Optional[float] = None
+
+    # RS vs Nifty — momentum (8 periods)
+    rs_nifty_1d_momentum: Optional[float] = None
+    rs_nifty_1w_momentum: Optional[float] = None
+    rs_nifty_1m_momentum: Optional[float] = None
+    rs_nifty_3m_momentum: Optional[float] = None
+    rs_nifty_6m_momentum: Optional[float] = None
+    rs_nifty_12m_momentum: Optional[float] = None
+    rs_nifty_24m_momentum: Optional[float] = None
+    rs_nifty_36m_momentum: Optional[float] = None
     rs_nifty_persistence: Optional[float] = None
+
+    # RS vs Nifty 500 — 8 periods
+    rs_nifty500_1d_rank: Optional[float] = None
+    rs_nifty500_1w_rank: Optional[float] = None
+    rs_nifty500_1m_rank: Optional[float] = None
+    rs_nifty500_3m_rank: Optional[float] = None
+    rs_nifty500_6m_rank: Optional[float] = None
+    rs_nifty500_12m_rank: Optional[float] = None
+    rs_nifty500_24m_rank: Optional[float] = None
+    rs_nifty500_36m_rank: Optional[float] = None
+    rs_nifty500_persistence: Optional[float] = None
+
+    # RS vs S&P 500 — 8 periods
+    rs_sp500_1d_rank: Optional[float] = None
+    rs_sp500_1w_rank: Optional[float] = None
+    rs_sp500_1m_rank: Optional[float] = None
+    rs_sp500_3m_rank: Optional[float] = None
+    rs_sp500_6m_rank: Optional[float] = None
+    rs_sp500_12m_rank: Optional[float] = None
+    rs_sp500_24m_rank: Optional[float] = None
+    rs_sp500_36m_rank: Optional[float] = None
+    rs_sp500_persistence: Optional[float] = None
+
+    # RS vs MSCI World — 8 periods
+    rs_msci_1d_rank: Optional[float] = None
+    rs_msci_1w_rank: Optional[float] = None
+    rs_msci_1m_rank: Optional[float] = None
+    rs_msci_3m_rank: Optional[float] = None
+    rs_msci_6m_rank: Optional[float] = None
+    rs_msci_12m_rank: Optional[float] = None
+    rs_msci_24m_rank: Optional[float] = None
+    rs_msci_36m_rank: Optional[float] = None
+    rs_msci_persistence: Optional[float] = None
+
+    # RS vs Gold — 8 periods
+    rs_gold_1d_rank: Optional[float] = None
+    rs_gold_1w_rank: Optional[float] = None
+    rs_gold_1m_rank: Optional[float] = None
+    rs_gold_3m_rank: Optional[float] = None
+    rs_gold_6m_rank: Optional[float] = None
+    rs_gold_12m_rank: Optional[float] = None
+    rs_gold_24m_rank: Optional[float] = None
+    rs_gold_36m_rank: Optional[float] = None
+    rs_gold_persistence: Optional[float] = None
 
     # State & Action
     state: Optional[str] = None
